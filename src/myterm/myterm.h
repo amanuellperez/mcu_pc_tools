@@ -22,7 +22,22 @@
 #ifndef __MYTERM_H__
 #define __MYTERM_H__
 
-void myterm();
+#include <string>
+#include <alp_termios_cfg.h>
+
+struct Myterm_cfg{
+    std::string serial_port = "/dev/ttyUSB0";
+    int baud_rate        = 9600;
+
+    // cfg -> usb_cfg
+    static
+    void to_termios_cfg(const Myterm_cfg& cfg, alp::Termios_cfg& usb_cfg);
+
+};
+
+void myterm(const Myterm_cfg& cfg);
+
+std::ostream& operator<<(std::ostream& out, const Myterm_cfg&);
 
 #endif
 

@@ -16,10 +16,34 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Programa básico equivalente a screen. Probarlo con el test de uart.
+#include "myterm.h"
+
 #include <alp_termios_iostream.h>
 #include "avr_termios.h"
 
 #include <iostream>
+
+// Myterm_cfg
+// ----------
+// cfg -> usb_cfg
+void Myterm_cfg::to_termios_cfg(const Myterm_cfg& cfg, alp::Termios_cfg& usb_cfg)
+{
+    usb_cfg.baud_rate(cfg.baud_rate);
+
+    cfg_avr_uart_polling_read(usb_cfg); 
+//    usb_cfg.print(std::cout);
+}
+
+std::ostream& operator<<(std::ostream& out, const Myterm_cfg& cfg)
+{
+    out << "Myterm_cfg\n";
+    out << "\tserial_port = " << cfg.serial_port << '\n';
+    out << "\tbaud_rate   = " << cfg.baud_rate << '\n';
+
+    return out;
+}
+
+
 
 
 /* Use this variable to remember original terminal attributes. */
@@ -31,11 +55,11 @@ static void reset_input_mode ()
 }
 
 
-void cfg_cin()
+void cin_init()
 {
     /* Make sure stdin is a terminal. */
     if (!::isatty (STDIN_FILENO))
-	throw std::runtime_error{"cfg_cin"};
+	throw std::runtime_error{"cin_init"};
 
     /* Save the terminal attributes so we can restore them later. */
     old_cin_cfg.copy_cfg_from(STDIN_FILENO);
@@ -47,33 +71,24 @@ void cfg_cin()
 
     cfg.noncanonical_polling_read();
     if (cfg.apply_cfg_now(STDIN_FILENO) == -1)
-	throw std::runtime_error("cfg_cin::apply_cfg_now");
+	throw std::runtime_error("cin_init::apply_cfg_now");
 }
 
+//static void myterm_init(const Myterm_cfg& cfg)
+//{
+//}
 
-void myterm()
+static void myterm_run(alp::Termios_iostream& usb)
 {
-
-    std::string usb_port = "/dev/ttyUSB0";
-    alp::Termios_cfg usb_cfg;
-    alp::cfg_avr_uart_polling_read(usb_cfg); 
-
-    alp::Termios_iostream usb{usb_port, usb_cfg};
-    cfg_cin();
-
     // Observar la forma de hacer el polling. No puedo usar los operadores >>
     // ya que bloquean. Necesitamos llamar a read directamente.
     while (1){
 	char c;
-	if (::read(usb.fd(), &c, 1))
+	if (alp::read(usb, c))
 	    std::cout << c << std::flush;
 
-	if (::read(STDIN_FILENO, &c, 1)){
-	    if (c == '\n')
-		usb << '\r';
-	    else
-		usb << c;
-	}
+	if (alp::cin_read(c))
+	    usb << c;
 
 	if (!std::cin)
 	    throw std::runtime_error{"stdin error!!!"};
@@ -81,6 +96,27 @@ void myterm()
 	if (!usb)
 	    throw std::runtime_error{"usb error!!!"};
     }
+}
+
+
+static void myterm_hello(std::ostream& out, const Myterm_cfg& cfg)
+{
+    out << cfg << '\n';
+}
+
+
+void myterm(const Myterm_cfg& cfg)
+{
+// usb_init:
+    alp::Termios_cfg usb_cfg;
+    Myterm_cfg::to_termios_cfg(cfg, usb_cfg);
+
+    alp::Termios_iostream usb{cfg.serial_port, usb_cfg};
+
+    cin_init();
+
+    myterm_hello(std::cout, cfg);
+    myterm_run(usb);
 
 }
 

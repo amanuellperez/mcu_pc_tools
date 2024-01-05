@@ -1,6 +1,5 @@
 SOURCES = main.cpp	\
-		  myterm.cpp	\
-		  avr_termios.cpp
+		  myterm.cpp
 
 
 BIN = xx

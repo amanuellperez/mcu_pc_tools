@@ -38,11 +38,11 @@
 
 constexpr char USAGE[] =
 "Terminal\n"
-"Forma de uso: myterm [--help] TODO \n"
-"Argumentos:\n"
-"    TODO\n"
+"Forma de uso: myterm [--help] [--baud baud_rate] [--port serial_port] TODO \n"
 "Opciones:\n"
-"    --help     Muestra esta ayuda.\n";
+"   --help                 Muestra esta ayuda.\n"
+"   --baud baud_rate       Pasamos el baud rate de la conexión.\n"
+"   --port serial_port     Cadena con el nombre del puerto donde conectarse.\n";
 
 
 class Main_app{
@@ -59,6 +59,7 @@ private:
 
 // Args
     static constexpr int num_args = 0;
+    Myterm_cfg cfg;
 
 // Options
 };
@@ -76,6 +77,8 @@ void Main_app::parse_command_line(int argc, char* argv[])
     getopts.add_option('h', help);
     getopts.add_option("help", help);
 
+    getopts.add_option("baud", cfg.baud_rate);
+    getopts.add_option("port", cfg.serial_port);
 
     auto files = getopts.parse(argc, argv);
 
@@ -102,7 +105,7 @@ void Main_app::run(int argc, char* argv[])
 
 void Main_app::run()
 {
-    myterm();
+    myterm(cfg);
 }
 
 
