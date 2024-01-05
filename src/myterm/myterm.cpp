@@ -22,6 +22,10 @@
 #include "avr_termios.h"
 
 #include <iostream>
+#include <cctype>   // isprint
+		    
+#include <atd_ostream.h>
+
 
 // Myterm_cfg
 // ----------
@@ -74,9 +78,24 @@ void cin_init()
 	throw std::runtime_error("cin_init::apply_cfg_now");
 }
 
-//static void myterm_init(const Myterm_cfg& cfg)
-//{
-//}
+// std::isprint no considera printable: \n, \r
+static inline bool isprint(char c)
+{
+    return std::isprint(c) or 
+	    (c == '\n')	or
+	    (c == '\r');
+}
+
+static void myterm_print(std::ostream& out, char c)
+{
+    if (isprint(c))
+	out << c;
+
+    else
+	atd::print_int_as_hex(out, static_cast<uint8_t>(c), '\\');
+
+    out.flush();
+}
 
 static void myterm_run(alp::Termios_iostream& usb)
 {
@@ -85,7 +104,7 @@ static void myterm_run(alp::Termios_iostream& usb)
     while (1){
 	char c;
 	if (alp::read(usb, c))
-	    std::cout << c << std::flush;
+	    myterm_print(std::cout, c);
 
 	if (alp::cin_read(c))
 	    usb << c;
