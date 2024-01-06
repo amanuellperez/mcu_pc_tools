@@ -87,15 +87,31 @@ inline bool Myterm::isprint(char c)
 	    (c == '\r');
 }
 
-void Myterm::print(std::ostream& out, char c)
+void Myterm::screen_print(std::ostream& screen, char c)
 {
     if (isprint(c))
-	out << c;
+	screen << c;
 
     else
-	atd::print_int_as_hex(out, static_cast<uint8_t>(c), '\\');
+	atd::print_int_as_hex(screen, static_cast<uint8_t>(c), '\\');
 
-    out.flush();
+    screen.flush();
+}
+
+
+
+inline 
+void Myterm::file_print(std::ofstream& out, char c)
+{
+    out << c << std::flush;
+}
+
+void Myterm::print(std::ostream& screen, std::ofstream& file, char c)
+{
+    screen_print(screen, c);
+
+    if (file.is_open())
+	file_print(file, c);
 }
 
 void Myterm::run()
@@ -105,7 +121,7 @@ void Myterm::run()
     while (1){
 	char c;
 	if (alp::read(usb_, c))
-	    print(std::cout, c);
+	    print(std::cout, fout_, c);
 
 	if (alp::cin_read(c))
 	    usb_ << c;
@@ -132,10 +148,27 @@ void Myterm::usb_init(const Myterm_cfg& cfg)
     usb_.open(cfg.serial_port, usb_cfg);
 }
 
+void Myterm::file_init(const std::string& fname)
+{
+    if (fname.empty())
+	return;
+
+// TODO: comprobar que el nombre sea de un fichero no existente
+
+    fout_.open(fname);
+    if (!fout_){
+	std::cerr << "Error: can't open file " << fname << '\n';
+	return;
+    }
+
+}
+
+
 void Myterm::init(const Myterm_cfg& cfg)
 {
     usb_init(cfg);
     cin_init();
+    file_init(cfg.output_file);
 }
 
 void Myterm::open(const Myterm_cfg& cfg)

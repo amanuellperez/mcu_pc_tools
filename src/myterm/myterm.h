@@ -61,12 +61,17 @@ private:
     void init(const Myterm_cfg& cfg);
 	void usb_init(const Myterm_cfg& cfg);
 	void cin_init();
+	void file_init(const std::string& fname);
 
     void run();
 
 // Static interface
     static void hello(std::ostream& out, const Myterm_cfg& cfg);
-    static void print(std::ostream& out, char c);
+
+    static void print(std::ostream& screen, std::ofstream& file, char c);
+    static void screen_print(std::ostream& out, char c);
+    static void file_print(std::ofstream& out, char c);
+
     static bool isprint(char c);
     
 };
