@@ -87,7 +87,7 @@ inline bool Myterm::isprint(char c)
 	    (c == '\r');
 }
 
-void Myterm::screen_print(std::ostream& screen, char c)
+void Myterm::cout_print(std::ostream& screen, char c)
 {
     if (isprint(c))
 	screen << c;
@@ -108,10 +108,57 @@ void Myterm::file_print(std::ofstream& out, char c)
 
 void Myterm::print(std::ostream& screen, std::ofstream& file, char c)
 {
-    screen_print(screen, c);
+    if (print_cout_)
+	cout_print(screen, c);
 
     if (file.is_open())
 	file_print(file, c);
+}
+
+int cin_read(char& c)
+{
+    // TODO: poner timeout
+    int n = 0;
+    while (n == 0){
+	n = alp::cin_read(c);
+    }
+
+    return n;
+}
+
+void Myterm::open_fout(const std::string& fname)
+{
+    fout_.open(fname);
+
+// TODO: comprobar que el nombre sea de un fichero no existente
+
+    if (!fout_){
+	std::cerr << "Error: can't open file " << fname << '\n';
+	return;
+    }
+}
+
+void Myterm::change_save_file()
+{
+    if (fout_.is_open())
+	fout_.close();
+
+    else 
+	open_fout(output_file_name_);
+}
+
+
+void Myterm::control_command()
+{
+    char c;
+    if (cin_read(c) <= 0)
+	return;
+
+    switch (c){
+	break; case 's': change_save_file();
+	break; case 'n': change_cout_log();
+		
+    }
 }
 
 void Myterm::run()
@@ -123,8 +170,13 @@ void Myterm::run()
 	if (alp::read(usb_, c))
 	    print(std::cout, fout_, c);
 
-	if (alp::cin_read(c))
-	    usb_ << c;
+	if (alp::cin_read(c)){
+	    if (c == char_ctrl)
+		control_command();
+
+	    else
+		usb_ << c;
+	}
 
 	if (!std::cin)
 	    throw std::runtime_error{"stdin error!!!"};
@@ -153,13 +205,9 @@ void Myterm::file_init(const std::string& fname)
     if (fname.empty())
 	return;
 
-// TODO: comprobar que el nombre sea de un fichero no existente
+    output_file_name_ = fname;
 
-    fout_.open(fname);
-    if (!fout_){
-	std::cerr << "Error: can't open file " << fname << '\n';
-	return;
-    }
+    open_fout(fname);
 
 }
 
@@ -169,6 +217,8 @@ void Myterm::init(const Myterm_cfg& cfg)
     usb_init(cfg);
     cin_init();
     file_init(cfg.output_file);
+
+    print_cout_ = !cfg.no_print_cout;
 }
 
 void Myterm::open(const Myterm_cfg& cfg)

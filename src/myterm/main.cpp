@@ -39,12 +39,17 @@
 constexpr char USAGE[] =
 "Terminal\n"
 "Forma de uso: myterm [--help] [--baud baud_rate] [--port serial_port]\n"
-"                     [--save fname]\n"
+"                     [--save fname] [--no_cout]\n"
 "Opciones:\n"
 "   --help                 Muestra esta ayuda.\n"
 "   --baud baud_rate       Pasamos el baud rate de la conexión.\n"
+"   --no_cout              No muestra en pantalla lo que envia la conexión.\n"
 "   --port serial_port     Cadena con el nombre del puerto donde conectarse.\n"
-"   --save fname           Guarda la salida en el fichero `fname`.\n";
+"   --save fname           Guarda la salida en el fichero `fname`.\n"
+"\n\n"
+"Terminal básico para poder conectar el atmega32 al PC vía el cable de FTDI.\n"
+"La configuración se puede hacer por línea de comando, con las opciones\n"
+"anteriores, o pulsando la combinación de teclas Ctrl+A+<tecla_comando>.\n\n";
 
 
 class Main_app{
@@ -82,6 +87,7 @@ void Main_app::parse_command_line(int argc, char* argv[])
     getopts.add_option("baud", cfg.baud_rate);
     getopts.add_option("port", cfg.serial_port);
     getopts.add_option("save", cfg.output_file);
+    getopts.add_option("no_cout", cfg.no_print_cout);
 
 
     auto files = getopts.parse(argc, argv);

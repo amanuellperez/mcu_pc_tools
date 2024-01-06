@@ -25,6 +25,8 @@
 #include <string>
 #include <fstream>
 
+#include <atd_ascii.h>
+
 #include <alp_termios_cfg.h>
 #include <alp_termios_iostream.h>
 
@@ -34,7 +36,9 @@ struct Myterm_cfg{
     int baud_rate        = 9600;
 
 // Cfg
-    std::string output_file;	// si !empty() guardamos la salida ahí también
+    std::string output_file; // si !empty() guardamos la salida ahí también
+    static constexpr const char output_file_default_name[] = "myterm_file.dat";
+    bool no_print_cout = false; // sacamos por pantalla la salida?
 
 // Helpers
     // cfg -> usb_cfg
@@ -51,11 +55,16 @@ public:
     void open(const Myterm_cfg& cfg);
     
 private:
+// static cfg
+    static constexpr char char_ctrl = atd::ASCII::Ctrl::A;
+
 // Data
     alp::Termios_iostream usb_;	// name??? tty_? term_? ...?
+    std::ofstream fout_;    
+    std::string output_file_name_ = Myterm_cfg::output_file_default_name; 
     
 // Cfg
-    std::ofstream fout_;    
+    bool print_cout_ = true;
 
 // Functions
     void init(const Myterm_cfg& cfg);
@@ -63,13 +72,19 @@ private:
 	void cin_init();
 	void file_init(const std::string& fname);
 
+    void open_fout(const std::string& fname);
+
     void run();
+    void control_command();
+	void change_save_file();
+	void change_cout_log() {print_cout_ = !print_cout_;}
+
+    void print(std::ostream& out, std::ofstream& file, char c);
 
 // Static interface
     static void hello(std::ostream& out, const Myterm_cfg& cfg);
 
-    static void print(std::ostream& screen, std::ofstream& file, char c);
-    static void screen_print(std::ostream& out, char c);
+    static void cout_print(std::ostream& out, char c);
     static void file_print(std::ofstream& out, char c);
 
     static bool isprint(char c);
