@@ -49,7 +49,8 @@ std::ostream& operator<<(std::ostream& out, const Myterm_cfg& cfg)
 
 
 
-
+// Myterm
+// ------
 /* Use this variable to remember original terminal attributes. */
 static alp::Termios_cfg old_cin_cfg;
 
@@ -59,7 +60,7 @@ static void reset_input_mode ()
 }
 
 
-void cin_init()
+void Myterm::cin_init()
 {
     /* Make sure stdin is a terminal. */
     if (!::isatty (STDIN_FILENO))
@@ -79,14 +80,14 @@ void cin_init()
 }
 
 // std::isprint no considera printable: \n, \r
-static inline bool isprint(char c)
+inline bool Myterm::isprint(char c)
 {
     return std::isprint(c) or 
 	    (c == '\n')	or
 	    (c == '\r');
 }
 
-static void myterm_print(std::ostream& out, char c)
+void Myterm::print(std::ostream& out, char c)
 {
     if (isprint(c))
 	out << c;
@@ -97,46 +98,51 @@ static void myterm_print(std::ostream& out, char c)
     out.flush();
 }
 
-static void myterm_run(alp::Termios_iostream& usb)
+void Myterm::run()
 {
     // Observar la forma de hacer el polling. No puedo usar los operadores >>
     // ya que bloquean. Necesitamos llamar a read directamente.
     while (1){
 	char c;
-	if (alp::read(usb, c))
-	    myterm_print(std::cout, c);
+	if (alp::read(usb_, c))
+	    print(std::cout, c);
 
 	if (alp::cin_read(c))
-	    usb << c;
+	    usb_ << c;
 
 	if (!std::cin)
 	    throw std::runtime_error{"stdin error!!!"};
 
-	if (!usb)
+	if (!usb_)
 	    throw std::runtime_error{"usb error!!!"};
     }
 }
 
 
-static void myterm_hello(std::ostream& out, const Myterm_cfg& cfg)
+void Myterm::hello(std::ostream& out, const Myterm_cfg& cfg)
 {
     out << cfg << '\n';
 }
 
-
-void myterm(const Myterm_cfg& cfg)
+void Myterm::usb_init(const Myterm_cfg& cfg)
 {
-// usb_init:
     alp::Termios_cfg usb_cfg;
     Myterm_cfg::to_termios_cfg(cfg, usb_cfg);
 
-    alp::Termios_iostream usb{cfg.serial_port, usb_cfg};
+    usb_.open(cfg.serial_port, usb_cfg);
+}
 
+void Myterm::init(const Myterm_cfg& cfg)
+{
+    usb_init(cfg);
     cin_init();
+}
 
-    myterm_hello(std::cout, cfg);
-    myterm_run(usb);
-
+void Myterm::open(const Myterm_cfg& cfg)
+{
+    init(cfg);
+    hello(std::cout, cfg);
+    run();
 }
 
 

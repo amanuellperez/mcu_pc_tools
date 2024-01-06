@@ -23,21 +23,55 @@
 #define __MYTERM_H__
 
 #include <string>
+#include <fstream>
+
 #include <alp_termios_cfg.h>
+#include <alp_termios_iostream.h>
 
 struct Myterm_cfg{
+// Conexión
     std::string serial_port = "/dev/ttyUSB0";
     int baud_rate        = 9600;
 
+// Cfg
+    std::string output_file;	// si !empty() guardamos la salida ahí también
+
+// Helpers
     // cfg -> usb_cfg
     static
     void to_termios_cfg(const Myterm_cfg& cfg, alp::Termios_cfg& usb_cfg);
 
 };
 
-void myterm(const Myterm_cfg& cfg);
-
 std::ostream& operator<<(std::ostream& out, const Myterm_cfg&);
+
+
+class Myterm{
+public:
+    void open(const Myterm_cfg& cfg);
+    
+private:
+// Data
+    alp::Termios_iostream usb_;	// name??? tty_? term_? ...?
+    
+// Cfg
+    std::ofstream fout_;    
+
+// Functions
+    void init(const Myterm_cfg& cfg);
+	void usb_init(const Myterm_cfg& cfg);
+	void cin_init();
+
+    void run();
+
+// Static interface
+    static void hello(std::ostream& out, const Myterm_cfg& cfg);
+    static void print(std::ostream& out, char c);
+    static bool isprint(char c);
+    
+};
+
+
 
 #endif
 

@@ -105,7 +105,8 @@ void Main_app::run(int argc, char* argv[])
 
 void Main_app::run()
 {
-    myterm(cfg);
+    Myterm term;
+    term.open(cfg);
 }
 
 
