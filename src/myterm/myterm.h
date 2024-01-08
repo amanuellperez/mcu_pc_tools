@@ -25,6 +25,8 @@
 #include <string>
 #include <fstream>
 
+#include <poll.h>
+
 #include <atd_ascii.h>
 
 #include <alp_termios_cfg.h>
@@ -62,7 +64,8 @@ private:
     alp::Termios_iostream usb_;	// name??? tty_? term_? ...?
     std::ofstream fout_;    
     std::string output_file_name_ = Myterm_cfg::output_file_default_name; 
-    
+    std::array<pollfd, 2> pfds_;
+
 // Cfg
     bool print_cout_ = true;
 
@@ -71,10 +74,15 @@ private:
 	void usb_init(const Myterm_cfg& cfg);
 	void cin_init();
 	void file_init(const std::string& fname);
+	void poll_init();
 
     void open_fout(const std::string& fname);
 
     void run();
+
+    void wait_for_fd_event();
+    void write_fd_event();
+
     void control_command();
 	void change_save_file();
 	void change_cout_log() {print_cout_ = !print_cout_;}

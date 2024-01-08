@@ -74,6 +74,7 @@ void Myterm::cin_init()
     alp::Termios_cfg cfg;
     cfg.copy_cfg_from(STDIN_FILENO);
 
+   // cfg.noncanonical_polling_read();
     cfg.noncanonical_polling_read();
     if (cfg.apply_cfg_now(STDIN_FILENO) == -1)
 	throw std::runtime_error("cin_init::apply_cfg_now");
@@ -115,15 +116,9 @@ void Myterm::print(std::ostream& screen, std::ofstream& file, char c)
 	file_print(file, c);
 }
 
-int cin_read(char& c)
+inline int cin_read(char& c)
 {
-    // TODO: poner timeout
-    int n = 0;
-    while (n == 0){
-	n = alp::cin_read(c);
-    }
-
-    return n;
+    return alp::cin_read(c);
 }
 
 void Myterm::open_fout(const std::string& fname)
@@ -161,28 +156,46 @@ void Myterm::control_command()
     }
 }
 
+// wait for file descriptor event
+void Myterm::wait_for_fd_event()
+{
+// std::cerr << '.'; // para mostrar el flujo
+    if (poll(pfds_.data(), pfds_.size(), -1) == -1){
+	perror("poll");
+	throw std::runtime_error{"poll error"};
+    }
+}
+
+// Observar la forma de hacer el polling. No puedo usar los operadores >>
+// ya que bloquean. Necesitamos llamar a read directamente.
+// TODO: nombre? no me gusta write_fd_event!!!
+void Myterm::write_fd_event()
+{
+    char c;
+
+    while(alp::read(usb_, c) > 0) // TODO: ahora puedo leer bloques de bytes
+	print(std::cout, fout_, c);
+
+    if (alp::cin_read(c)){
+	if (c == char_ctrl)
+	    control_command();
+
+	else
+	    usb_ << c;
+    }
+
+    if (!std::cin)
+	throw std::runtime_error{"stdin error!!!"};
+
+    if (!usb_)
+	throw std::runtime_error{"usb error!!!"};
+}
+
 void Myterm::run()
 {
-    // Observar la forma de hacer el polling. No puedo usar los operadores >>
-    // ya que bloquean. Necesitamos llamar a read directamente.
     while (1){
-	char c;
-	if (alp::read(usb_, c))
-	    print(std::cout, fout_, c);
-
-	if (alp::cin_read(c)){
-	    if (c == char_ctrl)
-		control_command();
-
-	    else
-		usb_ << c;
-	}
-
-	if (!std::cin)
-	    throw std::runtime_error{"stdin error!!!"};
-
-	if (!usb_)
-	    throw std::runtime_error{"usb error!!!"};
+	wait_for_fd_event();
+	write_fd_event();
     }
 }
 
@@ -211,12 +224,21 @@ void Myterm::file_init(const std::string& fname)
 
 }
 
+void Myterm::poll_init()
+{
+    pfds_[0].fd	    = STDIN_FILENO;
+    pfds_[0].events = POLLIN;
+
+    pfds_[1].fd	    = usb_.fd();
+    pfds_[1].events = POLLIN;
+}
 
 void Myterm::init(const Myterm_cfg& cfg)
 {
     usb_init(cfg);
     cin_init();
     file_init(cfg.output_file);
+    poll_init();
 
     print_cout_ = !cfg.no_print_cout;
 }
