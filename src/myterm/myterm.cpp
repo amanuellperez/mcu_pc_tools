@@ -26,6 +26,12 @@
 		    
 #include <atd_ostream.h>
 
+constexpr char MYTERM_CONTROL_HELP[] =
+"\n\nCtrl+A\n"
+"       +h    Muestra esta ayuda.\n"
+"       +s    [save] Graba (o deja de grabar) en el fichero de salida.\n"
+"       +n    Escribe (o deja de escribir) la salida en std::cout\n"
+"             (aunque de momento sigue haciendo `echo` del teclado).\n";
 
 // Myterm_cfg
 // ----------
@@ -116,9 +122,17 @@ void Myterm::print(std::ostream& screen, std::ofstream& file, char c)
 	file_print(file, c);
 }
 
-inline int cin_read(char& c)
+inline int cin_read(char& c, bool wait = false)
 {
-    return alp::cin_read(c);
+    if (wait == false)
+	return alp::cin_read(c);
+
+// else
+    int n = 0;
+    while (n == 0){
+	n = alp::cin_read(c);
+    }
+    return n;
 }
 
 void Myterm::open_fout(const std::string& fname)
@@ -135,23 +149,28 @@ void Myterm::open_fout(const std::string& fname)
 
 void Myterm::change_save_file()
 {
-    if (fout_.is_open())
+    if (fout_.is_open()){
 	fout_.close();
+	std::cerr << "\nClosing file " << output_file_name_ << '\n';
+    }
 
-    else 
+    else {
 	open_fout(output_file_name_);
+	std::cerr << "\nSaving output in file " << output_file_name_ << '\n';
+    }
 }
 
 
 void Myterm::control_command()
 {
     char c;
-    if (cin_read(c) <= 0)
+    if (cin_read(c, true) <= 0)
 	return;
 
     switch (c){
 	break; case 's': change_save_file();
 	break; case 'n': change_cout_log();
+	break; case 'h': std::cerr << MYTERM_CONTROL_HELP;
 		
     }
 }
