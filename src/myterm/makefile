@@ -2,8 +2,8 @@ SOURCES = main.cpp	\
 		  myterm.cpp
 
 
-BIN = xx
-BIN? = myterm
+#BIN = xx
+BIN?= myterm
 
 
 include $(APP_COMPRULES)

@@ -91,7 +91,8 @@ inline bool Myterm::isprint(char c)
 {
     return std::isprint(c) or 
 	    (c == '\n')	or
-	    (c == '\r');
+	    (c == '\r') or
+	    (c == '\t');
 }
 
 void Myterm::cout_print(std::ostream& screen, char c)
