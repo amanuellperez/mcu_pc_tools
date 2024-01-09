@@ -111,7 +111,9 @@ void Myterm::cout_print(std::ostream& screen, char c)
 inline 
 void Myterm::file_print(std::ofstream& out, char c)
 {
-    out << c << std::flush;
+//    out << c << std::flush; CUIDADO: operator<< procesa '\n','\t' ...
+    out.put(c);
+    out.flush();
 }
 
 void Myterm::print(std::ostream& screen, std::ofstream& file, char c)
