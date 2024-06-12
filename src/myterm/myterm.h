@@ -24,6 +24,7 @@
 
 #include <string>
 #include <fstream>
+#include <array>
 
 #include <poll.h>
 
