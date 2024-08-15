@@ -29,84 +29,176 @@
 #
 #       Este script se encarga de convertir el fichero .ttf en .txt
 #
-#  USAGE
-#       > ttf2txt.py font.ttf
-#       Genera el fichero font.txt con las letras ascii
 #
 #  HISTORIA
 #    Manuel Perez
 #    13/08/2024 Primer intento
 #
 #****************************************************************************/
-# Depende de: img2txt (proyecto app)
-#   "img2txt -m image" genera un fichero de texto a partir
-#   de la imagen 'image' con valores 0/255 (monocroma)
-import os, sys, string
+import os, sys, argparse
+import string
 
-from PIL import Image, ImageFont
+from PIL import Image, ImageFont, ImageDraw
 
+# **************************************************************************
+#                               FUNCTIONS
+# **************************************************************************
+def mark_color():
+    return (255, 0, 0)
+
+# TODO: dar opción a pasar como parametro la resolucion con la que mirar los
+# colores
+# El color del marcador es rojo, deberia de ser
+# r == 255 and g == 0 and b == 0 pero las imagenes no siempre
+# guardan los colores pedidos, sino que hace un gradiente 
+def is_mark_color(r, g, b):
+    return (r > 127 and g < 128 and b < 128)
+
+def X_color():
+    return (0, 255, 0)
+
+# black: r = 0, g = 0, b = 0
+def is_X_color(r, g, b):
+    return (r < 128 and g > 127 and b < 128)
+
+# Creamos una imagen con todas los caracteres ASCII en una línea
+# Los caracteres en posiciones pares los escribimos en rojo (es el marcador
+# |), los de posiciones impares en blanco
+def image_with_text(font_file, font_size, str_txt, out_file):
+    font = ImageFont.truetype(font_file, font_size)
+
+    img = Image.new("RGB", (100,100))
+    draw = ImageDraw.Draw(img)
+
+    # TODO: ¿cómo calcular la altura de la imagen? 
+    w =int( draw.textlength(ascii_char, font) + 1)
+    img2 = img.resize((w, 100), Image.NEAREST)
+    draw = ImageDraw.Draw(img2)
+
+#    draw.text((0,0), ascii_char, font=font, fill=(0, 255,0,0))
+    i = 0
+    x = 0
+    for c in str_txt:
+        i += 1
+        if i % 2 == 0:
+            color = X_color()
+        else:
+            color = mark_color()
+
+        draw.text((x,0), c, font = font, fill=color)
+        x += font.getlength(c)
+
+
+    img2.save(out_file)
+
+
+# Convierte una imagen en txt
+# Los marcadores entre letras los identifico con !
+def image2txt(fin, fout):
+    img = Image.open(fin)
+    out = open(fout, "w")
+
+    for j in range(img.height):
+        for i in range(img.width):
+            r, g, b = img.getpixel((i, j))
+            if (is_mark_color(r, g, b)):
+                out.write("! ")
+
+            else:
+                if (is_X_color(r, g, b)):
+                    out.write("X ")
+                else:
+                    out.write(". ")
+
+        out.write("\n")
+
+
+# Devuelve False si la linea tiene alguna X
+def is_blank(line):
+
+    for i in range(len(line)):
+        if (line[i] == "X"):
+            return False
+
+    return True
+
+
+
+def skip_blank_lines(fin):
+
+    for line in fin:
+        if (not is_blank(line)):
+            return
+
+
+# Como no se calcular la altura de las letras estoy creando una imagen
+# demasiado alta, con muchas filas blancas. Esta función borra todas esas
+# filas (TODO: esta función sobra cuando se calcule correctamente la altura)
+def remove_blank_lines(txt_in, txt_out):
+    fout = open(txt_out, "w")
+
+    with open(txt_in, "r") as fin:
+        skip_blank_lines(fin)
+        
+        for line in fin:
+            if (is_blank(line)):
+                return
+
+            fout.write(line)
+
+
+
+# **************************************************************************
+#                               MAIN
+# **************************************************************************
 # args
 # ----
-if (len(sys.argv) < 2):
-    print ("Usage: ttf2txt file.ttf [point_size]")
-    sys.exit(1)
+parser = argparse.ArgumentParser(
+                    description="Convert ttf file in txt file")
+
+parser.add_argument("font_file", help="TTF file")
+parser.add_argument("-s", "--font_size", default=16)
+parser.add_argument("-n", "--number", action="store_true", default=False,
+                        help="Generated only number char")
+parser.add_argument("-d", "--debug", action="store_true", default=False)
+args = parser.parse_args()
+
+font_file =args.font_file
+font_size = args.font_size
+debug     = args.debug
+only_digits = args.number
+
+# Fase validación
+# ---------------
+if (os.path.isfile(font_file) == False):
+    print("Can't find file " + font_file)
+    exit(1)
 
 
-font_file=sys.argv[1]
-if (len(sys.argv) >= 3):
-    point_size = sys.argv[2]
-else:
-    point_size = 16
+output =os.path.splitext(font_file)[0]
+output_bmp  = output + ".bmp"
+tmp_file    = output + "1.txt"
+output_txt  = output + ".txt"
 
-
-output_file=os.path.splitext(font_file)[0] + ".txt"
 
 # main
 # ----
-# Genero un fichero a.m, b.m, ... por cada letra (la extensión .m
-# la decide el programa img2txt -m)
-font = ImageFont.truetype(font_file, point_size)
-
-ascii_char ="!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
-
-i = 0   # no puedo usar el nombre de la letra para el fichero
-        # ya que hay simbolos no validos como nombres
-for c in ascii_char:
-    i += 1
-    print (c + " ... ", end='')
-    imgfile = str(i) + ".bmp"
-
-    img = Image.Image()._new(font.getmask(c))
-    img.save(imgfile)
-
-    res = os.system("img2txt -m " + imgfile)
-    if res == 0:
-        print ("OK")
-    else:
-        print ("FAIL")
-
-    os.remove(imgfile);
+ascii_char ="| |!|\"|#|$|%|&|'|(|)|*|+|,|-|.|/|0|1|2|3|4|5|6|7|8|9|:|;|<|=|>|?|@|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|[|\\|]|^|_|`|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|{|||}|"
+if (only_digits):
+    ascii_char="|0|1|2|3|4|5|6|7|8|9|"
 
 
-# Concateno todos los ficheros en uno solo
-# aprovechando para sustituir 0 y 255 por . y X
-out = open(output_file, "w")
+# output_bmp: fichero bmp con todas las letras "ascii_char"
+image_with_text(font_file, font_size, ascii_char, output_bmp)
 
-i = 0
-for c in ascii_char:
-    i += 1
-    fname = str(i) + ".m"
-    with open(fname, 'r') as f:
-        letter = f.read()
-
-    out.write("CHAR: " + c + "\n");
-    out.write(letter.replace('0', '.')
-                    .replace('255', 'X'))
-
-    out.write("\n");
-    os.remove(fname);
-     
+# output_txt: fichero txt con todas las letras "ascii_char"
+image2txt(output_bmp, tmp_file)
+remove_blank_lines(tmp_file, output_txt)
 
 
+# Clean
+if (debug == False):
+    os.remove(output_bmp)
+    os.remove(tmp_file)
 
 
