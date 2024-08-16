@@ -147,26 +147,176 @@ def remove_blank_lines(txt_in, txt_out):
             fout.write(line)
 
 
+# uso use_binary para poder depurar. 
+# Los caracteres se ven mejor con . y X, que con 0 y 1
+def read_file_as_matrix(fname, use_binary):
+    with open(fname, "r") as f:
+        r = f.read()
+    
+    if (use_binary == True):
+        r = r.replace('.', '0')
+        r = r.replace('X', '1')
+
+    line = r.splitlines()
+
+    y = []
+    for i in range(len(line)):
+        y += [line[i].split(' ')]
+
+    return y
+
+
+
+def print_matrix(matrix):
+    n = len(matrix)
+    m = len(matrix[0])
+
+    for i in range(n):
+        print ("0b", end = '')
+        for j in range(m):
+            print (matrix[i][j], end = '')
+
+        print(' ')
+
+
+def print_matrix_transpose(matrix):
+    n = len(matrix)
+    m = len(matrix[0])
+
+    for j in range(m):
+        print ("0b", end = '')
+        for i in range(n):
+            print (matrix[i][j], end = '')
+
+        print(' ')
+
+
+def print_matrix_reverse_transpose(matrix):
+    n = len(matrix)
+    m = len(matrix[0])
+
+    for j in range(m):
+        print ("0b", end = '')
+        for i in range(n - 1, -1, -1):
+            print (matrix[i][j], end = '')
+
+        print(' ')
+
+
+
+
+
+# Se nota que soy programador de C++? @_@
+def find_first(c, x, i0, ie):
+    return x.index('!', i0, ie)
+
+def skip(c, x, i0, ie):
+    if (i0 >= ie):
+        return ie
+    # while (i0 < ie and x[i0] == c): dont work
+    while (x[i0] == c):
+        i0 += 1
+        if (i0 >= ie):
+            return ie
+
+    i0 += 1
+    return i0
+
+
+
+# buscamos la siguiente columna que tenga !
+def find_mark_column(y, j0):
+    n = len(y)
+    m = len(y[0])
+
+    for j in range(j0, m):
+        for i in range(n):
+            if (y[i][j] == '!'):
+                return j
+
+    return m
+
+
+# Buscamos la primera columna que no tenga mark
+def skip_mark_column(y, j0):
+    n = len(y)
+    m = len(y[0])
+
+
+    for j in range(j0, m):
+        is_mark_column = False
+        for i in range(n):
+            if (y[i][j] == '!'):
+                is_mark_column = True
+
+        if (is_mark_column == False):
+            return j
+
+    return m
+
+
+def split_as_array(y):
+    j0 = find_mark_column(y, 0)
+    j0 += 1
+    j0 = skip_mark_column(y, j0)
+
+    je = find_mark_column(y, j0)
+
+    n = len(y)
+    m = len(y[0])
+
+    char = []
+    while (je != m):
+        c = []
+        for i in range(n):
+            c += [y[i][j0:je]]
+        
+        char += [c]
+
+        j0 = skip_mark_column(y, je)
+        je = find_mark_column(y, j0)
+
+    return char
+
+
+
+        
+
+
+
+
+
+
 
 # **************************************************************************
 #                               MAIN
 # **************************************************************************
 # args
 # ----
+# Formato de salida
+PRINT_MATRIX                   = 0
+PRINT_MATRIX_TRANSPOSE         = 1
+PRINT_MATRIX_REVERSE_TRANSPOSE = 2
+
 parser = argparse.ArgumentParser(
                     description="Convert ttf file in txt file")
 
 parser.add_argument("font_file", help="TTF file")
+parser.add_argument("-p", "--print_type", default=PRINT_MATRIX_TRANSPOSE,
+                        type=int,
+                        help="0 = print matrix; 1 = print matrix transpose; 2 = print matrix reverse transpose")
 parser.add_argument("-s", "--font_size", default=16)
 parser.add_argument("-n", "--number", action="store_true", default=False,
                         help="Generated only number char")
 parser.add_argument("-d", "--debug", action="store_true", default=False)
 args = parser.parse_args()
 
-font_file =args.font_file
-font_size = args.font_size
-debug     = args.debug
+font_file   = args.font_file
+font_size   = args.font_size
+debug       = args.debug
 only_digits = args.number
+print_type = args.print_type
+
 
 # Fase validación
 # ---------------
@@ -194,6 +344,27 @@ image_with_text(font_file, font_size, ascii_char, output_bmp)
 # output_txt: fichero txt con todas las letras "ascii_char"
 image2txt(output_bmp, tmp_file)
 remove_blank_lines(tmp_file, output_txt)
+
+
+# Convertimos el fichero en matriz
+y = read_file_as_matrix(output_txt, True)
+
+# Lo descomponemos en un array de matrices, cada matriz con el caracter
+# correspondiente
+char = split_as_array(y)
+
+for i in range(len(char)):
+    print ("// " + ascii_char[2*i + 1])
+    
+    if (print_type == PRINT_MATRIX):
+        print_matrix(char[i])
+
+    elif (print_type == PRINT_MATRIX_TRANSPOSE):
+        print_matrix_transpose(char[i])
+
+    elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
+        print_matrix_reverse_transpose(char[i])
+    
 
 
 # Clean
