@@ -29,6 +29,20 @@
 #
 #       Este script se encarga de convertir el fichero .ttf en .txt
 #
+#  IDEA
+#       Uso Pillow para convertir .ttf en .txt y luego el .txt lo convierto en
+#       el formato binario.
+#
+#       ve.0: (ve = version experimental)
+#       Al principio intenté generar un fichero .txt por cada letra, pero
+#       pillow generaba las letras de diferente altura. 
+#
+#       ve.1:
+#       Para evitar eso escribo todas las letras una detras de otra, 
+#       de tal manera que cada cual se coloca en la posición adecuada. 
+#       Para poder distinguir entre unas letras y otras uso un marcador '|' 
+#       que dibujo  en otro color que las letras para asi luego poder 
+#       separar las letras facilmente.
 #
 #  HISTORIA
 #    Manuel Perez
@@ -113,21 +127,30 @@ def image2txt(fin, fout):
         out.write("\n")
 
 
-# Devuelve False si la linea tiene alguna X
-def is_blank(line):
+# Devuelve True si la linea tiene alguna caracter c
+def line_has_char(line, c):
 
     for i in range(len(line)):
-        if (line[i] == "X"):
-            return False
+        if (line[i] == c):
+            return True
 
-    return True
+    return False
 
+
+# Devuelve True si la columna j de la matriz x tiene el caracter c
+def column_has_char(x, j, c):
+
+    for i in range(len(x)):
+        if (x[i][j] == c):
+            return True
+
+    return False
 
 
 def skip_blank_lines(fin):
 
     for line in fin:
-        if (not is_blank(line)):
+        if (line_has_char(line, "X")):
             return
 
 
@@ -141,150 +164,15 @@ def remove_blank_lines(txt_in, txt_out):
         skip_blank_lines(fin)
         
         for line in fin:
-            if (is_blank(line)):
+            if (not line_has_char(line, "X")):
                 return
 
             fout.write(line)
 
-
-# uso use_binary para poder depurar. 
-# Los caracteres se ven mejor con . y X, que con 0 y 1
-def read_file_as_matrix(fname, use_binary):
-    with open(fname, "r") as f:
-        r = f.read()
-    
-    if (use_binary == True):
-        r = r.replace('.', '0')
-        r = r.replace('X', '1')
-
-    line = r.splitlines()
-
-    y = []
-    for i in range(len(line)):
-        y += [line[i].split(' ')]
-
-    return y
-
-
-
-def print_matrix(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-
-    for i in range(n):
-        print ("0b", end = '')
-        for j in range(m):
-            print (matrix[i][j], end = '')
-
-        print(' ')
-
-
-def print_matrix_transpose(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-
-    for j in range(m):
-        print ("0b", end = '')
-        for i in range(n):
-            print (matrix[i][j], end = '')
-
-        print(' ')
-
-
-def print_matrix_reverse_transpose(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-
-    for j in range(m):
-        print ("0b", end = '')
-        for i in range(n - 1, -1, -1):
-            print (matrix[i][j], end = '')
-
-        print(' ')
-
-
-
-
-
-# Se nota que soy programador de C++? @_@
-def find_first(c, x, i0, ie):
-    return x.index('!', i0, ie)
-
-def skip(c, x, i0, ie):
-    if (i0 >= ie):
-        return ie
-    # while (i0 < ie and x[i0] == c): dont work
-    while (x[i0] == c):
-        i0 += 1
-        if (i0 >= ie):
-            return ie
-
-    i0 += 1
-    return i0
-
-
-
-# buscamos la siguiente columna que tenga !
-def find_mark_column(y, j0):
-    n = len(y)
-    m = len(y[0])
-
-    for j in range(j0, m):
-        for i in range(n):
-            if (y[i][j] == '!'):
-                return j
-
-    return m
-
-
-# Buscamos la primera columna que no tenga mark
-def skip_mark_column(y, j0):
-    n = len(y)
-    m = len(y[0])
-
-
-    for j in range(j0, m):
-        is_mark_column = False
-        for i in range(n):
-            if (y[i][j] == '!'):
-                is_mark_column = True
-
-        if (is_mark_column == False):
-            return j
-
-    return m
-
-
-def split_as_array(y):
-    j0 = find_mark_column(y, 0)
-    j0 += 1
-    j0 = skip_mark_column(y, j0)
-
-    je = find_mark_column(y, j0)
-
-    n = len(y)
-    m = len(y[0])
-
-    char = []
-    while (je != m):
-        c = []
-        for i in range(n):
-            c += [y[i][j0:je]]
-        
-        char += [c]
-
-        j0 = skip_mark_column(y, je)
-        je = find_mark_column(y, j0)
-
-    return char
-
-
-
-        
-
-
-
-
+# Borra la columna j de la matriz x
+def matrix_remove_column(x, j):
+    for i in range(len(x)):
+        x[i].pop(j)
 
 
 
@@ -293,18 +181,10 @@ def split_as_array(y):
 # **************************************************************************
 # args
 # ----
-# Formato de salida
-PRINT_MATRIX                   = 0
-PRINT_MATRIX_TRANSPOSE         = 1
-PRINT_MATRIX_REVERSE_TRANSPOSE = 2
-
 parser = argparse.ArgumentParser(
                     description="Convert ttf file in txt file")
 
 parser.add_argument("font_file", help="TTF file")
-parser.add_argument("-p", "--print_type", default=PRINT_MATRIX_TRANSPOSE,
-                        type=int,
-                        help="0 = print matrix; 1 = print matrix transpose; 2 = print matrix reverse transpose")
 parser.add_argument("-s", "--font_size", default=16)
 parser.add_argument("-n", "--number", action="store_true", default=False,
                         help="Generated only number char")
@@ -315,7 +195,6 @@ font_file   = args.font_file
 font_size   = args.font_size
 debug       = args.debug
 only_digits = args.number
-print_type = args.print_type
 
 
 # Fase validación
@@ -345,26 +224,6 @@ image_with_text(font_file, font_size, ascii_char, output_bmp)
 image2txt(output_bmp, tmp_file)
 remove_blank_lines(tmp_file, output_txt)
 
-
-# Convertimos el fichero en matriz
-y = read_file_as_matrix(output_txt, True)
-
-# Lo descomponemos en un array de matrices, cada matriz con el caracter
-# correspondiente
-char = split_as_array(y)
-
-for i in range(len(char)):
-    print ("// " + ascii_char[2*i + 1])
-    
-    if (print_type == PRINT_MATRIX):
-        print_matrix(char[i])
-
-    elif (print_type == PRINT_MATRIX_TRANSPOSE):
-        print_matrix_transpose(char[i])
-
-    elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
-        print_matrix_reverse_transpose(char[i])
-    
 
 
 # Clean
