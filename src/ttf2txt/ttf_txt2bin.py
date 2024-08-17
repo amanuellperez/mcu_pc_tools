@@ -92,8 +92,7 @@ def print_matrix(matrix):
         for j in range(m):
             print (matrix[i][j], end = '')
 
-        print(' ')
-
+        print (", ", end = '')
 
 def print_matrix_transpose(matrix):
     n = len(matrix)
@@ -104,8 +103,27 @@ def print_matrix_transpose(matrix):
         for i in range(n):
             print (matrix[i][j], end = '')
 
-        print(' ')
+        print (", ", end = '')
 
+def print_zeros_to_complete_bytes(n):
+    if (n <= 8):
+        print ('0' * (8 - n), end = '')
+        return
+
+    if (n <= 16):
+        print ('0' * (16 - n), end = '')
+        return
+
+    if (n <= 32):
+        print ('0' * (32 - n), end = '')
+        return
+
+    if (n <= 64):
+        print ('0' * (64 - n), end = '')
+        return
+
+    print ("ERROR: too many zeros")
+    exit(1)
 
 def print_matrix_reverse_transpose(matrix):
     n = len(matrix)
@@ -113,10 +131,11 @@ def print_matrix_reverse_transpose(matrix):
 
     for j in range(m):
         print ("0b", end = '')
+        print_zeros_to_complete_bytes(n)
         for i in range(n - 1, -1, -1):
             print (matrix[i][j], end = '')
 
-        print(' ')
+        print (", ", end = '')
 
 
 
