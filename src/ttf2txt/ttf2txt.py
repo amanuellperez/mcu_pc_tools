@@ -85,7 +85,7 @@ def image_with_text(font_file, font_size, str_txt, out_file):
     draw = ImageDraw.Draw(img)
 
     # TODO: ¿cómo calcular la altura de la imagen? 
-    w =int( draw.textlength(ascii_char, font) + 1)
+    w =int( draw.textlength(str_txt, font) + 1)
     img2 = img.resize((w, 100), Image.NEAREST)
     draw = ImageDraw.Draw(img2)
 
@@ -147,28 +147,32 @@ def column_has_char(x, j, c):
     return False
 
 
-def skip_blank_lines(fin):
+# line: array de strings
+def skip_blank_lines(line):
+    for i in range(len(line)):
+        if (line_has_char(line[i], "X")):
+            return i
 
-    for line in fin:
-        if (line_has_char(line, "X")):
-            return
+    return len(line)
 
 
-# Como no se calcular la altura de las letras estoy creando una imagen
-# demasiado alta, con muchas filas blancas. Esta función borra todas esas
+
 # filas (TODO: esta función sobra cuando se calcule correctamente la altura)
 def remove_blank_lines(txt_in, txt_out):
     fout = open(txt_out, "w")
 
     with open(txt_in, "r") as fin:
-        skip_blank_lines(fin)
-        
-        for line in fin:
-            if (not line_has_char(line, "X")):
-                return
+        line = fin.read().splitlines()
+    
+    i0 = skip_blank_lines(line)
 
-            fout.write(line)
 
+    for i in range(i0, len(line)):
+
+        if (not line_has_char(line[i], "X")):
+            return
+
+        fout.write(line[i] + "\n")
 # Borra la columna j de la matriz x
 def matrix_remove_column(x, j):
     for i in range(len(x)):
@@ -185,7 +189,7 @@ parser = argparse.ArgumentParser(
                     description="Convert ttf file in txt file")
 
 parser.add_argument("font_file", help="TTF file")
-parser.add_argument("-s", "--font_size", default=16)
+parser.add_argument("-s", "--font_size", type=int, default=16)
 parser.add_argument("-n", "--number", action="store_true", default=False,
                         help="Generated only number char")
 parser.add_argument("-d", "--debug", action="store_true", default=False)

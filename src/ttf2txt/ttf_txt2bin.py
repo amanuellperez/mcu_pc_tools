@@ -303,7 +303,8 @@ parser = argparse.ArgumentParser(
                     description="Convert ouput of ttf2txt.py in txt file")
 
 parser.add_argument("txt_file", help="output of ttf2txt.py file")
-parser.add_argument("-p", "--print_type", default=PRINT_MATRIX_TRANSPOSE,
+parser.add_argument("-p", "--print_type",
+                    default=PRINT_MATRIX_REVERSE_TRANSPOSE,
                         type=int,
                         help="0 = print matrix; 1 = print matrix transpose; 2 = print matrix reverse transpose")
 parser.add_argument("-n", "--number", action="store_true", default=False,
