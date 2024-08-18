@@ -44,6 +44,12 @@
 #       que dibujo  en otro color que las letras para asi luego poder 
 #       separar las letras facilmente.
 #
+#  TODO
+#   + Probarlo con letras otf
+#   + No funciona con italic letters que tienen el símbolo ! oblícuo (al
+#     usarlo como marcador genera una línea inclinada de separación entre
+#     caracteres)
+#
 #  HISTORIA
 #    Manuel Perez
 #    13/08/2024 Primer intento
@@ -57,8 +63,16 @@ from PIL import Image, ImageFont, ImageDraw
 # **************************************************************************
 #                               FUNCTIONS
 # **************************************************************************
+# Si lo dibujo en blanco los colores los dibuja en gris
 def mark_color():
-    return (255, 0, 0)
+    #return (255, 0, 0)
+    return (255, 255, 255)
+
+def is_gray_but_not_black(r, g, b):
+    if ((r + g + b) < 100):
+        return False    # black
+
+    return (abs(r - g) < 50 and abs (r - b) < 50)
 
 # TODO: dar opción a pasar como parametro la resolucion con la que mirar los
 # colores
@@ -66,7 +80,8 @@ def mark_color():
 # r == 255 and g == 0 and b == 0 pero las imagenes no siempre
 # guardan los colores pedidos, sino que hace un gradiente 
 def is_mark_color(r, g, b):
-    return (r > 127 and g < 128 and b < 128)
+    #return (r > 127 and g < 128 and b < 128)
+    return is_gray_but_not_black(r, g, b)
 
 def X_color():
     return (0, 255, 0)
@@ -190,6 +205,8 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument("font_file", help="TTF file")
 parser.add_argument("-s", "--font_size", type=int, default=16)
+parser.add_argument("-c", "--characters", default="",
+                        help="Generated the sequence after -c option")
 parser.add_argument("-n", "--number", action="store_true", default=False,
                         help="Generated only number char")
 parser.add_argument("-d", "--debug", action="store_true", default=False)
@@ -198,6 +215,7 @@ args = parser.parse_args()
 font_file   = args.font_file
 font_size   = args.font_size
 debug       = args.debug
+characters  = args.characters
 only_digits = args.number
 
 
@@ -211,14 +229,30 @@ if (os.path.isfile(font_file) == False):
 output =os.path.splitext(font_file)[0]
 output_bmp  = output + ".bmp"
 tmp_file    = output + "1.txt"
-output_txt  = output + ".txt"
+
+output_txt  = output
+if (only_digits):
+    output_txt += "_number"
+
+output_txt += "_s" + str(font_size) + ".txt"
 
 
 # main
 # ----
-ascii_char ="| |!|\"|#|$|%|&|'|(|)|*|+|,|-|.|/|0|1|2|3|4|5|6|7|8|9|:|;|<|=|>|?|@|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|[|\\|]|^|_|`|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|{|||}|"
+#ascii_char0 ="| |!|\"|#|$|%|&|'|(|)|*|+|,|-|.|/|0|1|2|3|4|5|6|7|8|9|:|;|<|=|>|?|@|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|[|\\|]|^|_|`|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|{|||}|"
+#if (only_digits):
+#    ascii_char0 ="|0|1|2|3|4|5|6|7|8|9|"
+
+ascii_char0 =" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}"
 if (only_digits):
-    ascii_char="|0|1|2|3|4|5|6|7|8|9|"
+    ascii_char0 ="0123456789"
+
+if (len(characters) > 0):
+    ascii_char0 = characters
+
+ascii_char = "|"
+for i in range(len(ascii_char0)):
+    ascii_char += ascii_char0[i] + "|"
 
 
 # output_bmp: fichero bmp con todas las letras "ascii_char"
