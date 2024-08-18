@@ -39,7 +39,7 @@
 #
 #****************************************************************************/
 import os, sys, argparse
-import string
+import string, datetime
 
 
 # **************************************************************************
@@ -82,29 +82,6 @@ def read_file_as_matrix(fname, use_binary):
     return y
 
 
-
-def print_matrix(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-
-    for i in range(n):
-        print ("0b", end = '')
-        for j in range(m):
-            print (matrix[i][j], end = '')
-
-        print (", ", end = '')
-
-def print_matrix_transpose(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-
-    for j in range(m):
-        print ("0b", end = '')
-        for i in range(n):
-            print (matrix[i][j], end = '')
-
-        print (", ", end = '')
-
 def print_zeros_to_complete_bytes(n):
     if (n <= 8):
         print ('0' * (8 - n), end = '')
@@ -125,6 +102,33 @@ def print_zeros_to_complete_bytes(n):
     print ("ERROR: too many zeros")
     exit(1)
 
+def print_matrix(matrix):
+    n = len(matrix)
+    m = len(matrix[0])
+
+    for i in range(n):
+        print ("0b", end = '')
+        print_zeros_to_complete_bytes(n)
+        for j in range(m):
+            print (matrix[i][j], end = '')
+
+        if (j != n-1):
+            print (", ", end = '')
+
+def print_matrix_transpose(matrix):
+    n = len(matrix)
+    m = len(matrix[0])
+
+    for j in range(m):
+        print ("0b", end = '')
+        print_zeros_to_complete_bytes(n)
+        for i in range(n):
+            print (matrix[i][j], end = '')
+
+        if (j != m-1):
+            print (", ", end = '')
+
+
 def print_matrix_reverse_transpose(matrix):
     n = len(matrix)
     m = len(matrix[0])
@@ -135,7 +139,8 @@ def print_matrix_reverse_transpose(matrix):
         for i in range(n - 1, -1, -1):
             print (matrix[i][j], end = '')
 
-        print (", ", end = '')
+        if (j != m - 1):
+            print (", ", end = '')
 
 
 
@@ -308,6 +313,72 @@ def remove_lateral_blank_columns(char):
                 matrix_remove_column(char[k], -1)
 
 
+# DUDA: ¿Quién debe ser el autor que aparece en la licencia?
+#       A fin de cuentas está generado automáticamente. Mejor
+#       `ttf_txt2bin.py`?
+def print_gpl_license():
+    print ("// Copyright (C) ", end ='')
+    print (datetime.datetime.today().year, end = '')
+    print (" Manuel Perez ")
+    print ("//           mail: <manuel2perez@proton.me>")
+    print ("//           https://github.com/amanuellperez/mcu")
+    print ("//")
+    print ("// This file is part of the MCU++ Library.")
+    print ("//")
+    print ("// MCU++ Library is a free library: you can redistribute it and/or modify")
+    print ("// it under the terms of the GNU General Public License as published by")
+    print ("// the Free Software Foundation, either version 3 of the License, or")
+    print ("// (at your option) any later version.")
+    print ("//")
+    print ("// This library is distributed in the hope that it will be useful,")
+    print ("// but WITHOUT ANY WARRANTY; without even the implied warranty of")
+    print ("// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the")
+    print ("// GNU General Public License for more details.")
+    print ("//")
+    print ("// You should have received a copy of the GNU General Public License")
+    print ("// along with this program.  If not, see <https://www.gnu.org/licenses/>.")
+    print ("\n")
+    print ("// This file has been generated automatically by `ttf_txt2bin.py`")
+    print ("\n")
+
+def print_header(font_name, only_digits, nrows, ncols, nchars):
+    print ("#pragma once")
+    tag = "__ROM_FONT_" + font_name;
+    if (only_digits):
+        tag += "_NUMBER"
+
+    tag += "_" + str(nrows) + "x" + str(ncols) + "_H__"
+    print ("#ifndef " + tag.upper())
+    print ("#define " + tag.upper())
+
+    print ("\n#include <atd_rom.h>")
+    print ("// #include <avr_memory.h> <-- hay que incluirlo antes de este archivo")
+    print ("\nnamespace rom{")
+    print ("namespace font_" + font_name.lower() + "_" + str(nrows) + "x" +
+           str(ncols) + "{")
+
+    print ("\nusing ROM_read = MCU::ROM_read;\n")
+
+    if (only_digits == False):
+        print ("constexpr uint8_t font_index0 = 32;");
+
+    print ("constexpr uint8_t font_rows   = " + str(nrows) + "; // número de filas que tiene cada font")
+    print ("constexpr uint8_t font_cols   = " + str(ncols) + "; // número de columnas que tiene cada font")
+    print ("constexpr uint8_t font_nchars = " + str(nchars) + "; // número de caracteres")
+
+    print ("\nconstexpr")
+    print ("atd::ROM_biarray<", end = '')
+    # TODO: puede ser de uint16_t !!!
+    print ("uint8_t", end = '')
+    print (", font_nchars, font_cols, ROM_read> font")
+    print ("\tPROGMEM = {")
+
+    
+def print_tail():
+    print ("};")
+    print ("\n\n} // namespace font")
+    print ("} // namespace rom")
+    print ("\n#endif")
 # **************************************************************************
 #                               MAIN
 # **************************************************************************
@@ -326,14 +397,11 @@ parser.add_argument("-p", "--print_type",
                     default=PRINT_MATRIX_REVERSE_TRANSPOSE,
                         type=int,
                         help="0 = print matrix; 1 = print matrix transpose; 2 = print matrix reverse transpose")
-parser.add_argument("-n", "--number", action="store_true", default=False,
-                        help="Generated only number char")
 #parser.add_argument("-d", "--debug", action="store_true", default=False)
 args = parser.parse_args()
 
 txt_file   = args.txt_file
 #debug       = args.debug
-only_digits = args.number
 print_type = args.print_type
 
 
@@ -344,14 +412,22 @@ if (os.path.isfile(txt_file) == False):
     exit(1)
 
 
-#output =os.path.splitext(txt_file)[0]
+output = os.path.splitext(txt_file)[0]
+output_spl = output.split("_")
+font_name = output_spl[0]
+if (output_spl[1] == "number"):
+    only_digits = True
+else:
+    only_digits = False
+
 
 
 # main
 # ----
-ascii_char ="| |!|\"|#|$|%|&|'|(|)|*|+|,|-|.|/|0|1|2|3|4|5|6|7|8|9|:|;|<|=|>|?|@|A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|[|\\|]|^|_|`|a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z|{|||}|"
+ascii_char =" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}"
 if (only_digits):
-    ascii_char="|0|1|2|3|4|5|6|7|8|9|"
+    ascii_char ="0123456789"
+
 
 # Convertimos el fichero en matriz
 y = read_file_as_matrix(txt_file, True)
@@ -366,9 +442,14 @@ resize_all_chars_same_size(char)
 
 remove_lateral_blank_columns(char)
 
-for i in range(len(char)):
-    print ("// " + ascii_char[2*i + 1])
-    
+nchars = len(char)         # número de caracteres
+nrows  = len(char[0])      # núm. de filas que tiene un caracter
+ncols  = len(char[0][0])   # núm. de columnas que tiene un caracter
+
+print_gpl_license()
+print_header(font_name, only_digits, nrows, ncols, nchars)
+
+for i in range(nchars):
     if (print_type == PRINT_MATRIX):
         print_matrix(char[i])
 
@@ -377,7 +458,18 @@ for i in range(len(char)):
 
     elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
         print_matrix_reverse_transpose(char[i])
+
+    if (i != nchars - 1):
+        print (", ", end = '')
+
+    print ("// ", end = '')
+
+    if (ascii_char[i] != '\\'):  # el \ es problemático
+        print (ascii_char[i], end ='')
+
+    print ("", end='\n')
+
     
 
-
+print_tail()
 
