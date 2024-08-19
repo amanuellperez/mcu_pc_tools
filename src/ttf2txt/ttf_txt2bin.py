@@ -110,6 +110,7 @@ def print_zeros_to_complete_bytes(n):
     print ("ERROR: too many zeros")
     exit(1)
 
+# TODO: romperla en bytes como print_matrix_reverse_transpose (???)
 def print_matrix(matrix):
     n = len(matrix)
     m = len(matrix[0])
@@ -123,6 +124,7 @@ def print_matrix(matrix):
         if (j != n-1):
             print (", ", end = '')
 
+# TODO: romperla en bytes como print_matrix_reverse_transpose (???)
 def print_matrix_transpose(matrix):
     n = len(matrix)
     m = len(matrix[0])
@@ -137,18 +139,85 @@ def print_matrix_transpose(matrix):
             print (", ", end = '')
 
 
+# En los displays como el SDD1306 se escribe por 'pages', esto es, se escribe
+# a la vez los 8 bits en una columna, escribiendo de los bits menos
+# significativos a los mas (fila[0] = bit[0], fila[1] = bit[1] ...)
+# (ver fig. 8-14 de la datasheet).
+# Cuando queremos escribir glyphs de más de 1 byte de altura, tenemos que
+# escribir los bytes respetando ese orden (doy por supuesto que escribimos en
+# modo vertical)
+# Ejemplo:
+#   Supongamos que queremos escribir el siguiente '2' que tiene 2 bits de
+#   altura
+#
+#   . . X X X X . . .
+#   . . X X X X . . . 
+#   X X . . . . X X . 
+#   X X . . . . X X . 
+#   . . . . X X . . .  
+#   . . . . X X . . . 
+#   . . X X . . . . . 
+#   . . X X . . . . . 
+#   X X . . . . . . . 
+#   X X . . . . . . . 
+#   X X X X X X X X . 
+#   X X X X X X X X . 
+#   . . . . . . . . . 
+#   . . . . . . . . . 
+#   . . . . . . . . . 
+#   . . . . . . . . . 
+#
+#  Si nos fijamos en la primera columna:
+#
+#   . 0 <-- este es el bit menos significativo para el SDD1306
+#   . 0
+#   X 1
+#   X 1  <-- 1er byte a escribir
+#   . 0
+#   . 0
+#   . 0
+#   . 0
+# -------
+#   X 1 <-- este es el bit menos significativo para el SDD1306
+#   X 1
+#   X 1
+#   X 1  <-- 2º byte a escribir
+#   . 0
+#   . 0
+#   . 0
+#   . 0
+# Para escribir esta columna (usando el modo vertical) en el SDD1306 tenemos
+# que usar los bytes:
+#       0b00001100, 0b00001111
+# Observar que el orden está cambiado de si nos limitamos a hacer la
+# traspuesta de la matriz (conclusión: el nombre de esta función esta mal
+# puesto. TODO: cambiar nombre, ¿cual? )
 def print_matrix_reverse_transpose(matrix):
     n = len(matrix)
     m = len(matrix[0])
 
-    for j in range(m):
-        print ("0b", end = '')
-        print_zeros_to_complete_bytes(n)
-        for i in range(n - 1, -1, -1):
-            print (matrix[i][j], end = '')
+    nbytes = int(n / 8)
+    if ((n % 8) != 0):
+        nbytes += 1
 
-        if (j != m - 1):
-            print (", ", end = '')
+    for j in range(m):
+        # imprimimos el primer byte 
+
+        for b in range(nbytes):
+            
+            print ("0b", end = '')
+            
+            for r in range(8):
+                k = 7 - r       
+                i = 8*b + k
+                if (i < n):
+                    print (matrix[i][j], end = '')
+                else:
+                    print ('0', end = '')   # padding con 0 el último byte
+
+            if (b != nbytes - 1 or j != m - 1):
+                print (", ", end = '')
+
 
 
 
@@ -350,6 +419,10 @@ def print_gpl_license():
     print ("\n")
 
 def print_header(font_name, only_digits, nrows, ncols, nchars):
+    col_in_bytes = int(ncols / 8)
+    if (ncols % 8):
+        col_in_bytes += 1
+
     print ("#pragma once")
     tag = "__ROM_FONT_" + font_name + "_H__"
 
@@ -359,29 +432,35 @@ def print_header(font_name, only_digits, nrows, ncols, nchars):
     print ("\n#include <atd_rom.h>")
     print ("// #include <avr_memory.h> <-- hay que incluirlo antes de este archivo")
     print ("\nnamespace rom{")
-#    print ("namespace font_" + font_name.lower() + "_" + str(nrows) + "x" +
-#           str(ncols) + "{")
     print ("namespace font_" + font_name + "{")
 
     print ("\nusing ROM_read = MCU::ROM_read;\n")
 
+    print ("struct Font{")
+
     if (only_digits == False):
-        print ("constexpr uint8_t font_index0 = 32;");
+        print ("static constexpr uint8_t index0 = 32;");
 
-    print ("constexpr uint8_t font_rows   = " + str(nrows) + "; // número de filas que tiene cada font")
-    print ("constexpr uint8_t font_cols   = " + str(ncols) + "; // número de columnas que tiene cada font")
-    print ("constexpr uint8_t font_nchars = " + str(nchars) + "; // número de caracteres")
+    print ("static constexpr uint8_t rows           = " 
+                + str(nrows) + "; // número de filas que tiene cada font")
+    print ("static constexpr uint8_t cols           = " 
+                + str(ncols) + "; // número de columnas que tiene cada font")
+    print ("static constexpr uint8_t col_in_bytes   = " 
+                + str(col_in_bytes) + "; // número de bytes que tiene cada columna")
+    print ("static constexpr uint8_t nchars         = " 
+                + str(nchars) + "; // número de caracteres")
 
-    print ("\nconstexpr")
+    print ("\nstatic constexpr")
     print ("atd::ROM_biarray<", end = '')
-    # TODO: puede ser de uint16_t !!!
     print ("uint8_t", end = '')
-    print (", font_nchars, font_cols, ROM_read> font")
+    print (", nchars, cols*" + str(col_in_bytes) +", ROM_read> glyph")
     print ("\tPROGMEM = {")
 
     
 def print_tail():
-    print ("};")
+    print ("}; // glyphs")
+
+    print ("}; // struct Font")
     print ("\n\n} // namespace font")
     print ("} // namespace rom")
     print ("\n#endif")
