@@ -395,7 +395,7 @@ def output_name(iname, only_digits, print_type, char):
     if (only_digits):
         oname += "_number"
 
-    oname += "_" + str(nrows) + "x" + str(ncols)
+    oname += "_" + str(ncols) + "x" + str(nrows)
 
     if (print_type == PRINT_MATRIX):
         oname += "_r"
@@ -506,7 +506,7 @@ remove_lateral_blank_columns(char)
 # ---------------
 
 oname = output_name(font_name, only_digits, print_type, char)
-cpp_name = "rom_font_" + oname+ ".cpp"
+cpp_name = "rom_font_" + oname+ ".h"    # es un .h!!!
 
 # print_file(oname):
 sys.stdout = open(cpp_name, "w")
