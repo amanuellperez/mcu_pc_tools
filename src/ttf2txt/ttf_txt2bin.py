@@ -43,6 +43,14 @@ import string, datetime
 
 
 # **************************************************************************
+#                               CONSTANTES
+# **************************************************************************
+# Formato de salida
+PRINT_MATRIX                   = 0
+PRINT_MATRIX_TRANSPOSE         = 1
+PRINT_MATRIX_REVERSE_TRANSPOSE = 2
+
+# **************************************************************************
 #                               FUNCTIONS
 # **************************************************************************
 # Borra la columna j de la matriz x
@@ -343,19 +351,17 @@ def print_gpl_license():
 
 def print_header(font_name, only_digits, nrows, ncols, nchars):
     print ("#pragma once")
-    tag = "__ROM_FONT_" + font_name;
-    if (only_digits):
-        tag += "_NUMBER"
+    tag = "__ROM_FONT_" + font_name + "_H__"
 
-    tag += "_" + str(nrows) + "x" + str(ncols) + "_H__"
     print ("#ifndef " + tag.upper())
     print ("#define " + tag.upper())
 
     print ("\n#include <atd_rom.h>")
     print ("// #include <avr_memory.h> <-- hay que incluirlo antes de este archivo")
     print ("\nnamespace rom{")
-    print ("namespace font_" + font_name.lower() + "_" + str(nrows) + "x" +
-           str(ncols) + "{")
+#    print ("namespace font_" + font_name.lower() + "_" + str(nrows) + "x" +
+#           str(ncols) + "{")
+    print ("namespace font_" + font_name + "{")
 
     print ("\nusing ROM_read = MCU::ROM_read;\n")
 
@@ -379,15 +385,66 @@ def print_tail():
     print ("\n\n} // namespace font")
     print ("} // namespace rom")
     print ("\n#endif")
+
+
+def output_name(iname, only_digits, print_type, char):
+    nrows  = len(char[0])      # núm. de filas que tiene un caracter
+    ncols  = len(char[0][0])   # núm. de columnas que tiene un caracter
+
+    oname = iname;
+    if (only_digits):
+        oname += "_number"
+
+    oname += "_" + str(nrows) + "x" + str(ncols)
+
+    if (print_type == PRINT_MATRIX):
+        oname += "_r"
+
+    elif (print_type == PRINT_MATRIX_TRANSPOSE):
+        oname += "_cl"
+
+    elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
+        oname += "_cr"
+
+    return oname
+
+def print_output(char, only_digits, ascii_char):
+    nchars = len(char)         # número de caracteres
+    nrows  = len(char[0])      # núm. de filas que tiene un caracter
+    ncols  = len(char[0][0])   # núm. de columnas que tiene un caracter
+
+    print_gpl_license()
+    print_header(oname, only_digits, nrows, ncols, nchars)
+
+    for i in range(nchars):
+        if (print_type == PRINT_MATRIX):
+            print_matrix(char[i])
+
+        elif (print_type == PRINT_MATRIX_TRANSPOSE):
+            print_matrix_transpose(char[i])
+
+        elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
+            print_matrix_reverse_transpose(char[i])
+
+        if (i != nchars - 1):
+            print (", ", end = '')
+
+        print ("// ", end = '')
+
+        if (ascii_char[i] != '\\'):  # el \ es problemático
+            print (ascii_char[i], end ='')
+
+        print ("", end='\n')
+
+    print_tail()
+
+
+
 # **************************************************************************
 #                               MAIN
 # **************************************************************************
 # args
 # ----
-# Formato de salida
-PRINT_MATRIX                   = 0
-PRINT_MATRIX_TRANSPOSE         = 1
-PRINT_MATRIX_REVERSE_TRANSPOSE = 2
 
 parser = argparse.ArgumentParser(
                     description="Convert ouput of ttf2txt.py in txt file")
@@ -412,14 +469,14 @@ if (os.path.isfile(txt_file) == False):
     exit(1)
 
 
-output = os.path.splitext(txt_file)[0]
-output_spl = output.split("_")
-font_name = output_spl[0]
-if (output_spl[1] == "number"):
+iname = os.path.splitext(txt_file)[0]
+iname_spl = iname.split("_")
+font_name = iname_spl[0]
+
+if (iname_spl[1] == "number"):
     only_digits = True
 else:
     only_digits = False
-
 
 
 # main
@@ -442,34 +499,16 @@ resize_all_chars_same_size(char)
 
 remove_lateral_blank_columns(char)
 
-nchars = len(char)         # número de caracteres
-nrows  = len(char[0])      # núm. de filas que tiene un caracter
-ncols  = len(char[0][0])   # núm. de columnas que tiene un caracter
 
-print_gpl_license()
-print_header(font_name, only_digits, nrows, ncols, nchars)
 
-for i in range(nchars):
-    if (print_type == PRINT_MATRIX):
-        print_matrix(char[i])
+# ---------------
+# print_output():
+# ---------------
 
-    elif (print_type == PRINT_MATRIX_TRANSPOSE):
-        print_matrix_transpose(char[i])
+oname = output_name(font_name, only_digits, print_type, char)
+cpp_name = "rom_font_" + oname+ ".cpp"
 
-    elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
-        print_matrix_reverse_transpose(char[i])
-
-    if (i != nchars - 1):
-        print (", ", end = '')
-
-    print ("// ", end = '')
-
-    if (ascii_char[i] != '\\'):  # el \ es problemático
-        print (ascii_char[i], end ='')
-
-    print ("", end='\n')
-
-    
-
-print_tail()
+# print_file(oname):
+sys.stdout = open(cpp_name, "w")
+print_output(char, only_digits, ascii_char)
 
