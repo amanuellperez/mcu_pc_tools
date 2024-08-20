@@ -110,7 +110,7 @@ def print_zeros_to_complete_bytes(n):
     print ("ERROR: too many zeros")
     exit(1)
 
-# TODO: romperla en bytes como print_matrix_reverse_transpose (???)
+# TODO: romperla en bytes como print_matrix_by_columns_turn_right (???)
 def print_matrix(matrix):
     n = len(matrix)
     m = len(matrix[0])
@@ -124,8 +124,8 @@ def print_matrix(matrix):
         if (j != n-1):
             print (", ", end = '')
 
-# TODO: romperla en bytes como print_matrix_reverse_transpose (???)
-def print_matrix_transpose(matrix):
+# TODO: romperla en bytes como print_matrix_by_columns_turn_right (???)
+def print_matrix_by_columns_turn_left(matrix):
     n = len(matrix)
     m = len(matrix[0])
 
@@ -189,17 +189,16 @@ def print_matrix_transpose(matrix):
 # Para escribir esta columna (usando el modo vertical) en el SDD1306 tenemos
 # que usar los bytes:
 #       0b00001100, 0b00001111
-# Observar que el orden está cambiado de si nos limitamos a hacer la
-# traspuesta de la matriz (conclusión: el nombre de esta función esta mal
-# puesto. TODO: cambiar nombre, ¿cual? )
-def print_matrix_reverse_transpose(matrix):
+# Lo que hacemos es descomponer la columna en bytes y cada byte "girarlo hacia
+# la derecha" (en el sentido de las agujas del reloj)
+def print_matrix_by_columns_turn_right(matrix):
     n = len(matrix)
     m = len(matrix[0])
 
     nbytes = int(n / 8)
     if ((n % 8) != 0):
         nbytes += 1
-
+    
     for j in range(m):
         # imprimimos el primer byte 
 
@@ -418,9 +417,12 @@ def print_gpl_license():
     print ("// This file has been generated automatically by `ttf_txt2bin.py`")
     print ("\n")
 
-def print_header(font_name, only_digits, nrows, ncols, nchars):
-    col_in_bytes = int(ncols / 8)
-    if (ncols % 8):
+def print_header(font_name, only_digits, print_type,
+                  nrows, ncols, nchars):
+    # CUIDADO: el número de bytes que tiene una columna se calcula a
+    # partir del número de filas!!
+    col_in_bytes = int(nrows/ 8) 
+    if (nrows % 8):
         col_in_bytes += 1
 
     print ("#pragma once")
@@ -438,17 +440,33 @@ def print_header(font_name, only_digits, nrows, ncols, nchars):
 
     print ("struct Font{")
 
-    if (only_digits == False):
-        print ("static constexpr uint8_t index0 = 32;");
+    print ("// Los caracteres son para ser escritos por columnas o por filas?")
+    print ("static constexpr bool by_columns = ", end = '')
 
-    print ("static constexpr uint8_t rows           = " 
+    if (print_type == PRINT_MATRIX):
+        print ("false;")
+
+    else:
+        print ("true;");
+
+    print ("\n// Número de caracteres")
+    print ("static constexpr uint8_t nchars = " + str(nchars) + ";")
+
+    if (only_digits == False):
+        print ("\n// Los códigos ASCII empiezan en 32")
+        print ("static constexpr uint8_t index0 = 32;")
+
+    print ("\n// Dimensions")
+    print ("static constexpr uint8_t rows = " 
                 + str(nrows) + "; // número de filas que tiene cada font")
-    print ("static constexpr uint8_t cols           = " 
+    print ("static constexpr uint8_t cols = " 
                 + str(ncols) + "; // número de columnas que tiene cada font")
+
+    print ("\n// Tamaño en bytes")
     print ("static constexpr uint8_t col_in_bytes   = " 
                 + str(col_in_bytes) + "; // número de bytes que tiene cada columna")
-    print ("static constexpr uint8_t nchars         = " 
-                + str(nchars) + "; // número de caracteres")
+
+    print ("inline constexpr uint8_t char_byte_size() {return cols * col_in_bytes;}")
 
     print ("\nstatic constexpr")
     print ("atd::ROM_biarray<", end = '')
@@ -487,23 +505,23 @@ def output_name(iname, only_digits, print_type, char):
 
     return oname
 
-def print_output(char, only_digits, ascii_char):
+def print_output(char, only_digits, print_type, ascii_char):
     nchars = len(char)         # número de caracteres
     nrows  = len(char[0])      # núm. de filas que tiene un caracter
     ncols  = len(char[0][0])   # núm. de columnas que tiene un caracter
 
     print_gpl_license()
-    print_header(oname, only_digits, nrows, ncols, nchars)
+    print_header(oname, only_digits, print_type, nrows, ncols, nchars)
 
     for i in range(nchars):
         if (print_type == PRINT_MATRIX):
             print_matrix(char[i])
 
         elif (print_type == PRINT_MATRIX_TRANSPOSE):
-            print_matrix_transpose(char[i])
+            print_matrix_by_columns_turn_left(char[i])
 
         elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
-            print_matrix_reverse_transpose(char[i])
+            print_matrix_by_columns_turn_right(char[i])
 
         if (i != nchars - 1):
             print (", ", end = '')
@@ -589,5 +607,5 @@ cpp_name = "rom_font_" + oname+ ".h"    # es un .h!!!
 
 # print_file(oname):
 sys.stdout = open(cpp_name, "w")
-print_output(char, only_digits, ascii_char)
+print_output(char, only_digits, print_type, ascii_char)
 
