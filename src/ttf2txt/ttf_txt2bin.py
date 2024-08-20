@@ -466,7 +466,7 @@ def print_header(font_name, only_digits, print_type,
     print ("static constexpr uint8_t col_in_bytes   = " 
                 + str(col_in_bytes) + "; // número de bytes que tiene cada columna")
 
-    print ("inline constexpr uint8_t char_byte_size() {return cols * col_in_bytes;}")
+    print ("inline static constexpr uint8_t char_byte_size() {return cols * col_in_bytes;}")
 
     print ("\nstatic constexpr")
     print ("atd::ROM_biarray<", end = '')
