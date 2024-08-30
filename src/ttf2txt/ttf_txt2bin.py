@@ -440,21 +440,21 @@ def print_header(font_name, only_digits, print_type,
 
     print ("struct Font{")
 
-    print ("// Los caracteres son para ser escritos por columnas o por filas?")
-    print ("static constexpr bool by_columns = ", end = '')
+    print ("// Traits requirements")
+    print ("static constexpr bool is_by_columns{};")
+    print ("static constexpr bool is_ASCII_font{};")
 
-    if (print_type == PRINT_MATRIX):
-        print ("false;")
-
-    else:
-        print ("true;");
 
     print ("\n// Número de caracteres")
     print ("static constexpr uint8_t nchars = " + str(nchars) + ";")
 
+    # TODO: mas que `only_digits` realmente el parámetro es `is_ascii_font`
     if (only_digits == False):
         print ("\n// Los códigos ASCII empiezan en 32")
-        print ("static constexpr uint8_t index0 = 32;")
+        print ("static constexpr uint8_t index(char c) {return c - 32;}")
+    else:
+        print ("static constexpr uint8_t index(char c) {return c;}")
+
 
     print ("\n// Dimensions")
     print ("static constexpr uint8_t rows = " 
