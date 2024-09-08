@@ -46,9 +46,10 @@ import string, datetime
 #                               CONSTANTES
 # **************************************************************************
 # Formato de salida
-PRINT_MATRIX                   = 0
-PRINT_MATRIX_TRANSPOSE         = 1
-PRINT_MATRIX_REVERSE_TRANSPOSE = 2
+PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT = 0
+PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK  = 1
+PRINT_MATRIX_COLUMNS_LEFT                   = 2
+PRINT_MATRIX_COLUMNS_RIGHT                  = 3
 
 # **************************************************************************
 #                               FUNCTIONS
@@ -110,19 +111,55 @@ def print_zeros_to_complete_bytes(n):
     print ("ERROR: too many zeros")
     exit(1)
 
-# TODO: romperla en bytes como print_matrix_by_columns_turn_right (???)
-def print_matrix(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
 
-    for i in range(n):
-        print ("0b", end = '')
-        print_zeros_to_complete_bytes(n)
-        for j in range(m):
-            print (matrix[i][j], end = '')
+def print_matrix_by_rows_looking_from_the_front(matrix):
+    m = len(matrix)     # número de filas del caracter
+    n = len(matrix[0])  # número de columnas del caracter
 
-        if (j != n-1):
-            print (", ", end = '')
+    nbytes = int(n / 8)
+    if ((n % 8) != 0):
+        nbytes += 1
+
+    for i in range(m):
+        for b in range(nbytes):
+            
+            print ("0b", end = '')
+            
+            for k in range(8):
+                j = 8*b + k
+                if (j < n):
+                    print (matrix[i][j], end = '')
+                else:
+                    print ('0', end = '')   # padding con 0 el último byte
+
+            if (b != nbytes - 1 or i != m - 1):
+                print (", ", end = '')
+
+
+def print_matrix_by_rows_looking_from_the_back(matrix):
+    m = len(matrix)     # número de filas del caracter
+    n = len(matrix[0])  # número de columnas del caracter
+
+    nbytes = int(n / 8)
+    if ((n % 8) != 0):
+        nbytes += 1
+
+    for i in range(m):
+        for b in range(nbytes):
+            
+            print ("0b", end = '')
+            
+            for r in range(8):
+                k = 7 - r       
+                j = 8*b + k
+                if (j < n):
+                    print (matrix[i][j], end = '')
+                else:
+                    print ('0', end = '')   # padding con 0 el último byte
+
+            if (b != nbytes - 1 or i != m - 1):
+                print (", ", end = '')
+
 
 # TODO: romperla en bytes como print_matrix_by_columns_turn_right (???)
 def print_matrix_by_columns_turn_left(matrix):
@@ -192,8 +229,8 @@ def print_matrix_by_columns_turn_left(matrix):
 # Lo que hacemos es descomponer la columna en bytes y cada byte "girarlo hacia
 # la derecha" (en el sentido de las agujas del reloj)
 def print_matrix_by_columns_turn_right(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
+    n = len(matrix)     # DEBERIA SER m = número de filas del caracter
+    m = len(matrix[0])  # DEBERIA SER n = número de columnas del caracter
 
     nbytes = int(n / 8)
     if ((n % 8) != 0):
@@ -417,13 +454,35 @@ def print_gpl_license():
     print ("// This file has been generated automatically by `ttf_txt2bin.py`")
     print ("\n")
 
+def print_row_or_cols_in_bytes(nrows, ncols, print_type):
+    if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT
+        or 
+        print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK):
+        row_in_bytes = int(ncols/ 8) 
+
+        if (ncols % 8):
+            row_in_bytes += 1
+
+        print ("static constexpr uint8_t row_in_bytes   = " 
+                    + str(row_in_bytes) + "; // número de bytes que tiene cada fila")
+
+        return True
+
+    else:
+        # CUIDADO: el número de bytes que tiene una columna se calcula a
+        # partir del número de filas!!
+        col_in_bytes = int(nrows/ 8) 
+
+        if (nrows % 8):
+            col_in_bytes += 1
+
+        print ("static constexpr uint8_t col_in_bytes   = " 
+                    + str(col_in_bytes) + "; // número de bytes que tiene cada columna")
+
+        return False
+
 def print_header(font_name, only_digits, print_type,
                   nrows, ncols, nchars):
-    # CUIDADO: el número de bytes que tiene una columna se calcula a
-    # partir del número de filas!!
-    col_in_bytes = int(nrows/ 8) 
-    if (nrows % 8):
-        col_in_bytes += 1
 
     print ("#pragma once")
     tag = "__ROM_FONT_" + font_name + "_H__"
@@ -463,15 +522,20 @@ def print_header(font_name, only_digits, print_type,
                 + str(ncols) + "; // número de columnas que tiene cada font")
 
     print ("\n// Tamaño en bytes")
-    print ("static constexpr uint8_t col_in_bytes   = " 
-                + str(col_in_bytes) + "; // número de bytes que tiene cada columna")
+    by_rows = print_row_or_cols_in_bytes(nrows, ncols, print_type)
+
 
     print ("inline static constexpr uint8_t char_byte_size() {return cols * col_in_bytes;}")
 
     print ("\nstatic constexpr")
     print ("atd::ROM_biarray<", end = '')
     print ("uint8_t", end = '')
-    print (", nchars, cols*" + str(col_in_bytes) +", ROM_read> glyph")
+
+    if (by_rows == True):
+        print (", nchars, rows*row_in_bytes, ROM_read> glyph")
+    else:
+        print (", nchars, cols*col_in_bytes, ROM_read> glyph")
+
     print ("\tPROGMEM = {")
 
     
@@ -494,13 +558,16 @@ def output_name(iname, only_digits, print_type, char):
 
     oname += "_" + str(ncols) + "x" + str(nrows)
 
-    if (print_type == PRINT_MATRIX):
-        oname += "_r"
+    if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT):
+        oname += "_rf"
 
-    elif (print_type == PRINT_MATRIX_TRANSPOSE):
+    elif (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK):
+        oname += "_rb"
+
+    elif (print_type == PRINT_MATRIX_COLUMNS_LEFT):
         oname += "_cl"
 
-    elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
+    elif (print_type == PRINT_MATRIX_COLUMNS_RIGHT):
         oname += "_cr"
 
     return oname
@@ -514,13 +581,16 @@ def print_output(char, only_digits, print_type, ascii_char):
     print_header(oname, only_digits, print_type, nrows, ncols, nchars)
 
     for i in range(nchars):
-        if (print_type == PRINT_MATRIX):
-            print_matrix(char[i])
+        if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT):
+            print_matrix_by_rows_looking_from_the_front(char[i])
 
-        elif (print_type == PRINT_MATRIX_TRANSPOSE):
+        elif (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK):
+            print_matrix_by_rows_looking_from_the_back(char[i])
+
+        elif (print_type == PRINT_MATRIX_COLUMNS_LEFT):
             print_matrix_by_columns_turn_left(char[i])
 
-        elif (print_type == PRINT_MATRIX_REVERSE_TRANSPOSE):
+        elif (print_type == PRINT_MATRIX_COLUMNS_RIGHT):
             print_matrix_by_columns_turn_right(char[i])
 
         if (i != nchars - 1):
@@ -544,13 +614,17 @@ def print_output(char, only_digits, print_type, ascii_char):
 # ----
 
 parser = argparse.ArgumentParser(
-                    description="Convert ouput of ttf2txt.py in txt file")
+                    description="Convert ouput of ttf2txt.py in txt file",
+                    formatter_class=argparse.RawTextHelpFormatter)
 
 parser.add_argument("txt_file", help="output of ttf2txt.py file")
 parser.add_argument("-p", "--print_type",
-                    default=PRINT_MATRIX_REVERSE_TRANSPOSE,
+                    default=PRINT_MATRIX_COLUMNS_RIGHT,
                         type=int,
-                        help="0 = print matrix; 1 = print matrix transpose; 2 = print matrix reverse transpose")
+help='''0 = print matrix by rows, looking from the front
+1 = print matrix by rows, looking from the back
+2 = print matrix by columns, looking from the left side
+3 = print matrix by columns, looking from the right side''')
 #parser.add_argument("-d", "--debug", action="store_true", default=False)
 args = parser.parse_args()
 
