@@ -52,8 +52,82 @@ PRINT_MATRIX_COLUMNS_LEFT                   = 2
 PRINT_MATRIX_COLUMNS_RIGHT                  = 3
 
 # **************************************************************************
-#                               FUNCTIONS
+#                           MATRIX FUNCTIONS
 # **************************************************************************
+
+def matrix_empty(rows, cols):
+    return [[None for i in range(cols)] for j in range(rows)]
+#    return [[None]*cols]*rows <-- esto crea una shallow list!
+
+def matrix_rotate_to_the_right(matrix):
+    m = len(matrix) # numero de filas
+    n = len(matrix[0]) # numero de columnas
+
+    res = matrix_empty(n, m)
+
+    for i in range(m):
+        for j in range(n):
+            I = j
+            J = m - 1 - i
+            res[I][J] = matrix[i][j]
+
+    return res
+ 
+def matrix_rotate_to_the_left(matrix):
+    m = len(matrix) # numero de filas
+    n = len(matrix[0]) # numero de columnas
+
+    res = matrix_empty(n, m)
+
+    for i in range(m):
+        for j in range(n):
+            I = n - 1 - j
+            J = i
+            res[I][J] = matrix[i][j]
+
+    return res
+            
+
+def matrix_look_from_the_back(matrix):
+    m = len(matrix) # numero de filas
+    n = len(matrix[0]) # numero de columnas
+
+    res = matrix_empty(m, n)
+
+    for i in range(m):
+        for j in range(n):
+            I = i
+            J = n - 1 - j
+            res[I][J] = matrix[i][j]
+
+    return res
+
+# imprimimos la matriz como uint8_t
+def print_matrix(matrix):
+    m = len(matrix)     # número de filas del caracter
+    n = len(matrix[0])  # número de columnas del caracter
+
+    nbytes = int(n / 8)
+    if ((n % 8) != 0):
+        nbytes += 1
+
+    for i in range(m):
+        for b in range(nbytes):
+            
+            print ("0b", end = '')
+            
+            for k in range(8):
+                j = 8*b + k
+                if (j < n):
+                    print (matrix[i][j], end = '')
+                else:
+                    print ('0', end = '')   # padding con 0 el último byte
+
+            if (b != nbytes - 1 or i != m - 1):
+                print (", ", end = '')
+
+
+
 # Borra la columna j de la matriz x
 def matrix_remove_column(x, j):
     for i in range(len(x)):
@@ -91,89 +165,21 @@ def read_file_as_matrix(fname, use_binary):
     return y
 
 
-def print_zeros_to_complete_bytes(n):
-    if (n <= 8):
-        print ('0' * (8 - n), end = '')
-        return
-
-    if (n <= 16):
-        print ('0' * (16 - n), end = '')
-        return
-
-    if (n <= 32):
-        print ('0' * (32 - n), end = '')
-        return
-
-    if (n <= 64):
-        print ('0' * (64 - n), end = '')
-        return
-
-    print ("ERROR: too many zeros")
-    exit(1)
-
-
+# **************************************************************************
+#                               FUNCTIONS
+# **************************************************************************
 def print_matrix_by_rows_looking_from_the_front(matrix):
-    m = len(matrix)     # número de filas del caracter
-    n = len(matrix[0])  # número de columnas del caracter
-
-    nbytes = int(n / 8)
-    if ((n % 8) != 0):
-        nbytes += 1
-
-    for i in range(m):
-        for b in range(nbytes):
-            
-            print ("0b", end = '')
-            
-            for k in range(8):
-                j = 8*b + k
-                if (j < n):
-                    print (matrix[i][j], end = '')
-                else:
-                    print ('0', end = '')   # padding con 0 el último byte
-
-            if (b != nbytes - 1 or i != m - 1):
-                print (", ", end = '')
+    print_matrix(matrix)
 
 
 def print_matrix_by_rows_looking_from_the_back(matrix):
-    m = len(matrix)     # número de filas del caracter
-    n = len(matrix[0])  # número de columnas del caracter
-
-    nbytes = int(n / 8)
-    if ((n % 8) != 0):
-        nbytes += 1
-
-    for i in range(m):
-        for b in range(nbytes):
-            
-            print ("0b", end = '')
-            
-            for r in range(8):
-                k = 7 - r       
-                j = 8*b + k
-                if (j < n):
-                    print (matrix[i][j], end = '')
-                else:
-                    print ('0', end = '')   # padding con 0 el último byte
-
-            if (b != nbytes - 1 or i != m - 1):
-                print (", ", end = '')
+    res = matrix_look_from_the_back(matrix)
+    print_matrix(res)
 
 
-# TODO: romperla en bytes como print_matrix_by_columns_turn_right (???)
 def print_matrix_by_columns_turn_left(matrix):
-    n = len(matrix)
-    m = len(matrix[0])
-
-    for j in range(m):
-        print ("0b", end = '')
-        print_zeros_to_complete_bytes(n)
-        for i in range(n):
-            print (matrix[i][j], end = '')
-
-        if (j != m-1):
-            print (", ", end = '')
+    res = matrix_rotate_to_the_left(matrix)
+    print_matrix(res)
 
 
 # En los displays como el SDD1306 se escribe por 'pages', esto es, se escribe
@@ -229,32 +235,8 @@ def print_matrix_by_columns_turn_left(matrix):
 # Lo que hacemos es descomponer la columna en bytes y cada byte "girarlo hacia
 # la derecha" (en el sentido de las agujas del reloj)
 def print_matrix_by_columns_turn_right(matrix):
-    n = len(matrix)     # DEBERIA SER m = número de filas del caracter
-    m = len(matrix[0])  # DEBERIA SER n = número de columnas del caracter
-
-    nbytes = int(n / 8)
-    if ((n % 8) != 0):
-        nbytes += 1
-    
-    for j in range(m):
-        # imprimimos el primer byte 
-
-        for b in range(nbytes):
-            
-            print ("0b", end = '')
-            
-            for r in range(8):
-                k = 7 - r       
-                i = 8*b + k
-                if (i < n):
-                    print (matrix[i][j], end = '')
-                else:
-                    print ('0', end = '')   # padding con 0 el último byte
-
-            if (b != nbytes - 1 or j != m - 1):
-                print (", ", end = '')
-
-
+    res = matrix_rotate_to_the_right(matrix)
+    print_matrix(res)
 
 
 
