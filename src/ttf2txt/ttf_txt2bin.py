@@ -436,6 +436,28 @@ def print_gpl_license():
     print ("// This file has been generated automatically by `ttf_txt2bin.py`")
     print ("\n")
 
+def is_by_rows(print_type):
+    if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT
+        or 
+        print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK):
+        return True
+
+    else:
+        return False
+
+def print_type_trait(print_type):
+    if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT):
+        print ("static constexpr bool is_looking_from_the_front{};")
+
+    elif(print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK):
+        print ("static constexpr bool is_looking_from_the_back{};")
+
+    elif(print_type == PRINT_MATRIX_COLUMNS_RIGHT):
+        print ("static constexpr bool is_turned_to_the_right{};")
+
+    elif(print_type == PRINT_MATRIX_COLUMNS_LEFT):
+        print ("static constexpr bool is_turned_to_the_left{};")
+
 def print_row_or_cols_in_bytes(nrows, ncols, print_type):
     if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT
         or 
@@ -466,6 +488,8 @@ def print_row_or_cols_in_bytes(nrows, ncols, print_type):
 def print_header(font_name, only_digits, print_type,
                   nrows, ncols, nchars):
 
+    by_rows = is_by_rows(print_type)
+
     print ("#pragma once")
     tag = "__ROM_FONT_" + font_name + "_H__"
 
@@ -482,7 +506,14 @@ def print_header(font_name, only_digits, print_type,
     print ("struct Font{")
 
     print ("// Traits requirements")
-    print ("static constexpr bool is_by_columns{};")
+
+    if (by_rows):
+        print ("static constexpr bool is_by_rows{};")
+    else:
+        print ("static constexpr bool is_by_columns{};")
+
+    print_type_trait(print_type)
+
     print ("static constexpr bool is_ASCII_font{};")
 
 
@@ -504,10 +535,14 @@ def print_header(font_name, only_digits, print_type,
                 + str(ncols) + "; // número de columnas que tiene cada font")
 
     print ("\n// Tamaño en bytes")
-    by_rows = print_row_or_cols_in_bytes(nrows, ncols, print_type)
+    print_row_or_cols_in_bytes(nrows, ncols, print_type)
 
 
-    print ("inline static constexpr uint8_t char_byte_size() {return cols * col_in_bytes;}")
+    print ("inline static constexpr uint8_t char_byte_size() ", end='')
+    if (by_rows == True):
+        print ("{return rows * row_in_bytes;}")
+    else:
+        print ("{return cols * col_in_bytes;}")
 
     print ("\nstatic constexpr")
     print ("atd::ROM_biarray<", end = '')
@@ -605,8 +640,8 @@ parser.add_argument("-p", "--print_type",
                         type=int,
 help='''0 = print matrix by rows, looking from the front
 1 = print matrix by rows, looking from the back
-2 = print matrix by columns, looking from the left side
-3 = print matrix by columns, looking from the right side''')
+2 = print matrix by columns, turning to the left the characters
+3 = print matrix by columns, turning to the right the characters''')
 #parser.add_argument("-d", "--debug", action="store_true", default=False)
 args = parser.parse_args()
 
