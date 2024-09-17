@@ -462,26 +462,26 @@ def print_row_or_cols_in_bytes(nrows, ncols, print_type):
     if (print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_FRONT
         or 
         print_type == PRINT_MATRIX_BY_ROWS_LOOKING_FROM_THE_BACK):
-        row_in_bytes = int(ncols/ 8) 
+        bytes_in_a_row = int(ncols/ 8) 
 
         if (ncols % 8):
-            row_in_bytes += 1
+            bytes_in_a_row += 1
 
-        print ("static constexpr uint8_t row_in_bytes   = " 
-                    + str(row_in_bytes) + "; // número de bytes que tiene cada fila")
+        print ("static constexpr uint8_t bytes_in_a_row   = " 
+                    + str(bytes_in_a_row) + "; // número de bytes que tiene cada fila")
 
         return True
 
     else:
         # CUIDADO: el número de bytes que tiene una columna se calcula a
         # partir del número de filas!!
-        col_in_bytes = int(nrows/ 8) 
+        bytes_in_a_column = int(nrows/ 8) 
 
         if (nrows % 8):
-            col_in_bytes += 1
+            bytes_in_a_column += 1
 
-        print ("static constexpr uint8_t col_in_bytes   = " 
-                    + str(col_in_bytes) + "; // número de bytes que tiene cada columna")
+        print ("static constexpr uint8_t bytes_in_a_column= " 
+                    + str(bytes_in_a_column) + "; // número de bytes que tiene cada columna")
 
         return False
 
@@ -540,18 +540,18 @@ def print_header(font_name, only_digits, print_type,
 
     print ("inline static constexpr uint8_t char_byte_size() ", end='')
     if (by_rows == True):
-        print ("{return rows * row_in_bytes;}")
+        print ("{return rows * bytes_in_a_row;}")
     else:
-        print ("{return cols * col_in_bytes;}")
+        print ("{return cols * bytes_in_a_column;}")
 
     print ("\nstatic constexpr")
     print ("atd::ROM_biarray<", end = '')
     print ("uint8_t", end = '')
 
     if (by_rows == True):
-        print (", nchars, rows*row_in_bytes, ROM_read> glyph")
+        print (", nchars, rows*bytes_in_a_row, ROM_read> glyph")
     else:
-        print (", nchars, cols*col_in_bytes, ROM_read> glyph")
+        print (", nchars, cols*bytes_in_a_column, ROM_read> glyph")
 
     print ("\tPROGMEM = {")
 
