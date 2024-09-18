@@ -470,6 +470,10 @@ def print_row_or_cols_in_bytes(nrows, ncols, print_type):
         print ("static constexpr uint8_t bytes_in_a_row   = " 
                     + str(bytes_in_a_row) + "; // número de bytes que tiene cada fila")
 
+        print ("static constexpr uint8_t rows_in_bytes = " + str(nrows) + ";")
+        print ("static constexpr uint8_t cols_in_bytes = " +
+                                                    str(bytes_in_a_row) + ";")
+
         return True
 
     else:
@@ -482,6 +486,10 @@ def print_row_or_cols_in_bytes(nrows, ncols, print_type):
 
         print ("static constexpr uint8_t bytes_in_a_column= " 
                     + str(bytes_in_a_column) + "; // número de bytes que tiene cada columna")
+        print ("static constexpr uint8_t rows_in_bytes = " +
+                    str(bytes_in_a_column) + ";")
+        print ("static constexpr uint8_t cols_in_bytes = " +
+                                                    str(ncols) + ";")
 
         return False
 
